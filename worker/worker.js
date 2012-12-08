@@ -37,7 +37,6 @@ var dojoWorker = function(){
 		_importScript: function(src){
 			var path = staticObj._getPathPath(src);
 			var query = staticObj._getPathQuery(src);
-			
 			importScripts(path+".js"+query);
 		},
 		
@@ -81,6 +80,25 @@ var dojoWorker = function(){
 	
 	var orginalPostMessage = global.postMessage;
 	global.postMessage = function(obj){
+		function _isObject(obj){
+			return (Object.prototype.toString.call(obj) === '[object Object]');
+		}
+		function _formatMessage(obj){
+			return {
+				"type": "message",
+				"message": obj
+			};
+		}
+		
+		var formatted = true;
+		if(_isObject(obj)){
+			if(!obj.hasOwnProperty("type") || !obj.hasOwnProperty("message")){
+				obj = _formatMessage(obj);
+			}
+		}else{
+			obj = _formatMessage(obj);
+		}
+		
 		orginalPostMessage(obj);
 	}
 }
