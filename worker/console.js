@@ -1,13 +1,15 @@
 if (console && !orginalConsole) var orginalConsole = console;
 
 var console = {
+	_global: Function('return this')() || (42, eval)('this'),
+	
 	log: function(){
 		var ary = new Array();
 		for(var i = 0; i < arguments.length; i++){
 			ary.push(arguments[i]);
 		}
 		
-		global.postMessage({
+		console._global.postMessage({
 			"type": "log", "message": ary
 		});
 		if(orginalConsole){
@@ -17,7 +19,7 @@ var console = {
 		}
 	},
 	error: function(){
-		global.postMessage({
+		console._global.postMessage({
 			"type": "error", "message": arguments
 		});
 		if(orginalConsole){
@@ -27,7 +29,7 @@ var console = {
 		}
 	},
 	info: function(){
-		global.postMessage({
+		console._global.postMessage({
 			"type": "info", "message": arguments
 		});
 		if(orginalConsole){
@@ -37,7 +39,7 @@ var console = {
 		}
 	},
 	warn: function(){
-		global.postMessage({
+		console._global.postMessage({
 			"type": "warn", "message": arguments
 		});
 		if(orginalConsole){
