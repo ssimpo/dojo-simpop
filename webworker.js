@@ -6,17 +6,19 @@
 //		Stephen Simpson <me@simpo.org>, <http://simpo.org>
 define([
 	"dojo/_base/declare",
+	"dojo/Evented",
 	"require",
 	"dojo/_base/lang",
 	"dojo/has",
 	"dojo/json",
-	"dojo/_base/array"
+	"dojo/_base/array",
+	"dojo/on"
 ], function(
-	declare, require, lang, has, JSON, array
+	declare, Evented, require, lang, has, JSON, array, on
 ){
 	"use strict";
 	
-	var construct = declare(null, {
+	var construct = declare([Evented], {
 		"src": null,
 		"worker": null,
 		
@@ -37,9 +39,7 @@ define([
 					var dojoWorkerUrl = require.toUrl("./worker/worker.js");
 					this.worker = new Worker(dojoWorkerUrl);
 					
-					this.worker.addEventListener(
-						'message', lang.hitch(this, this._receiveMessage), false
-					);
+					on(this.worker, "message", lang.hitch(this, this._receiveMessage));
 					
 					this.postMessage({
 						"type": "init",
@@ -60,8 +60,24 @@ define([
 			}
 			
 			if(!this._handleConsole(messageObj)){
-				// Do something else when not console message
+				if(this._isObject(messageObj)){
+					if(messageObj.hasOwnProperty("type") && messageObj.hasOwnProperty("message")){
+						if(messageObj.type == "message"){
+							on.emit(this, "message", {
+								"bubbles": false,
+								"cancelable": false,
+								"message": messageObj.message
+							});
+						}
+					}
+				}
+				
+				// Do something else? (if other message types needed)?
 			}
+		},
+		
+		_isObject: function(obj){
+			return (Object.prototype.toString.call(obj) === '[object Object]');
 		},
 		
 		_handleConsole: function(messageObj){
@@ -162,7 +178,7 @@ define([
 				var dummyUrl = require.toUrl("./worker/dummy.js");
 				var worker = new Worker(dummyUrl);
 				
-				worker.onmessage = function(event){
+				on(worker, "message", function(event){
 					if(!main._hasCanPostObjectsCalled){
 						main._hasCanPostObjects = (event.data.value === 'dummy');
 						//main._hasCanPostObjectsCallback.call(
@@ -171,7 +187,7 @@ define([
 					}
 					main._hasCanPostObjectsCalled = true;
 					worker.terminate();
-				};
+				});
 					
 				try{
 					worker.postMessage({'value': 'dummy'});
