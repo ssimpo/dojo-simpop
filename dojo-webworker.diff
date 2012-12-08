@@ -1,13 +1,13 @@
-diff -r 2627a99f2501 -r 781f0fa88b6c .hgtags
+diff -r 2627a99f2501 -r 1763ea05bc3e .hgtags
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/.hgtags	Sat Dec 08 11:52:32 2012 +0000
++++ b/.hgtags	Sat Dec 08 16:07:37 2012 +0000
 @@ -0,0 +1,1 @@
 +2627a99f25016c97aa946569b3fef91f09145a79 ORGINAL
-diff -r 2627a99f2501 -r 781f0fa88b6c _base/configWebworker.js
+diff -r 2627a99f2501 -r 1763ea05bc3e _base/configWebworker.js
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/_base/configWebworker.js	Sat Dec 08 11:52:32 2012 +0000
++++ b/_base/configWebworker.js	Sat Dec 08 16:07:37 2012 +0000
 @@ -0,0 +1,52 @@
-+function webworkerDojoConfig(config, baseUrl){
++function webworkerDojoConfig(config, baseUrl, global){
 +	// reset the has cache with webworker-appropriate values;
 +	var hasCache = {
 +		"host-browser":0,
@@ -21,7 +21,7 @@ diff -r 2627a99f2501 -r 781f0fa88b6c _base/configWebworker.js
 +		config.hasCache[p] = hasCache[p];
 +	}
 +	
-+	var cacheBust = window.dojoConfig.cacheBust;
++	var cacheBust = global.dojoConfig.cacheBust;
 +	var fixupUrl= function(url){
 +		url += ""; // make sure url is a Javascript string (some paths may be a Java string)
 +		return url + (cacheBust ? ((/\?/.test(url) ? "&" : "?") + cacheBust) : "");
@@ -29,11 +29,11 @@ diff -r 2627a99f2501 -r 781f0fa88b6c _base/configWebworker.js
 +	
 +	// reset some configuration switches with webworker-appropriate values
 +	var webworkerConfig = {
-+		"baseUrl": "/scripts/dojo/",
++		"baseUrl": baseUrl,
 +		"loaderPatch": {
 +			injectUrl: function(url, callback){
 +				try{
-+					importScripts(readUrl(url, "UTF-8"));
++					importScripts(url);
 +					callback();
 +				}catch(e){
 +					console.info("failed to load resource (" + url + ")");
@@ -60,27 +60,87 @@ diff -r 2627a99f2501 -r 781f0fa88b6c _base/configWebworker.js
 +	}
 +}
 \ No newline at end of file
-diff -r 2627a99f2501 -r 781f0fa88b6c dojo.js
+diff -r 2627a99f2501 -r 1763ea05bc3e dojo.js
 --- a/dojo.js	Sat Dec 08 10:43:34 2012 +0100
-+++ b/dojo.js	Sat Dec 08 11:52:32 2012 +0000
-@@ -167,6 +167,20 @@
++++ b/dojo.js	Sat Dec 08 16:07:37 2012 +0000
+@@ -62,6 +62,11 @@
+ 	// prid: plugin resource identifier
+ 	// The integer constant 1 is used in place of true and 0 in place of false.
+ 
++	// Get the global variable (window in the normal browser but not in
++	// webworker or in Node, Rhino ...etc).
++	var global = (typeof window !== "undefined")
++		? window : Function('return this')() || (42, eval)('this');
++	
+ 	// define a minimal library to help build the loader
+ 	var	noop = function(){
+ 		},
+@@ -167,6 +172,21 @@
  		load(baseUrl + "/_base/configRhino.js");
  		rhinoDojoConfig(defaultConfig, baseUrl, rhinoArgs);
  	}
 +	
 +	has.add("is-webworker", ((typeof importScripts !== 'undefined') && (typeof document === 'undefined')));
 +	if(has("is-webworker")){
-+		var path = "";
-+		for(var i = 0; i < global.config.dojoConfig.packages.length; i++){
-+			var cPackage = global.config.dojoConfig.packages[i];
++		// Get the path to Dojo (untested for CDN)
++		var dojoPath = "";
++		for(var i = 0; i < global.dojoConfig.packages.length; i++){
++			var cPackage = global.dojoConfig.packages[i];
 +			if(cPackage.name == "dojo"){
-+				path += cPackage.location + "/";
++				dojoPath += cPackage.location + "/";
 +			}
 +		}
 +		
-+		importScripts(path+"/_base/configWebworker.js");
-+		webworkerDojoConfig(defaultConfig, baseUrl)
++		importScripts(dojoPath+"/_base/configWebworker.js");
++		webworkerDojoConfig(defaultConfig, dojoPath, global);
 +	}
  
  	// userConfig has tests override defaultConfig has tests; do this after the environment detection because
  	// the environment detection usually sets some has feature values in the hasCache.
+@@ -261,7 +281,7 @@
+ 
+ 			// note: to get the file:// protocol to work in FF, you must set security.fileuri.strict_origin_policy to false in about:config
+ 			has.add("dojo-xhr-factory", 1);
+-			has.add("dojo-force-activex-xhr", has("host-browser") && !doc.addEventListener && window.location.protocol == "file:");
++			has.add("dojo-force-activex-xhr", has("host-browser") && !doc.addEventListener && global.location.protocol == "file:");
+ 			has.add("native-xhr", typeof XMLHttpRequest != "undefined");
+ 			if(has("native-xhr") && !has("dojo-force-activex-xhr")){
+ 				getXhr = function(){
+@@ -663,8 +683,8 @@
+ 		if(has("dojo-test-sniff")){
+ 			// pass down doh.testConfig from parent as if it were a data-dojo-config
+ 			try{
+-				if(window.parent != window && window.parent.require){
+-					var doh = window.parent.require("doh");
++				if(global.parent != global && global.parent.require){
++					var doh = global.parent.require("doh");
+ 					doh && mix(dojoSniffConfig, doh.testConfig);
+ 				}
+ 			}catch(e){}
+@@ -1593,7 +1613,7 @@
+ 		startTimer = function(){
+ 			clearTimer();
+ 			if(req.waitms){
+-				timerId = window.setTimeout(function(){
++				timerId = global.setTimeout(function(){
+ 					clearTimer();
+ 					signal(error, makeError("timeout", waiting));
+ 				}, req.waitms);
+@@ -1622,7 +1642,7 @@
+ 					};
+ 				}
+ 			},
+-			windowOnLoadListener = domOn(window, "load", "onload", function(){
++			windowOnLoadListener = domOn(global, "load", "onload", function(){
+ 				req.pageLoaded = 1;
+ 				doc.readyState!="complete" && (doc.readyState = "complete");
+ 				windowOnLoadListener();
+@@ -1641,7 +1661,7 @@
+ 
+ 				var node = owner.node = doc.createElement("script"),
+ 					onLoad = function(e){
+-						e = e || window.event;
++						e = e || global.event;
+ 						var node = e.target || e.srcElement;
+ 						if(e.type === "load" || /complete|loaded/.test(node.readyState)){
+ 							loadDisconnector();
