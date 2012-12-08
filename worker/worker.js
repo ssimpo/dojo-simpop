@@ -9,7 +9,6 @@ var dojoWorker = function(){
 		"relativePath": "",
 		"_includes": [
 			"./worker/console",
-			//"./worker/require"
 			"../dojo/dojo"
 		],
 		
@@ -25,9 +24,6 @@ var dojoWorker = function(){
 				if(obj.hasOwnProperty("src")){
 					global.dojoConfig = global.config.dojoConfig;
 					staticObj._importScript(obj.src);
-					//require.config({
-						//"packages": global.config.dojoConfig.packages
-					//});
 				}
 			}
 		},
