@@ -1,10 +1,6 @@
-var global = this;
-var window = this;
-
-global.dojoConfig = {};
-global.config = {};
-
 var dojoWorker = function(){
+	var global = Function('return this')() || (42, eval)('this');
+	
 	var staticObj = {
 		"relativePath": "",
 		"_includes": [
@@ -14,15 +10,15 @@ var dojoWorker = function(){
 		
 		_init: function(obj){
 			if(staticObj._isObject(obj)){
-				global.config = obj;
+				global.dojoConfig = obj.dojoConfig;
 				
 				if(obj.hasOwnProperty("relativePath")){
 					staticObj.relativePath = obj.relativePath;
 					staticObj._loadIncludes();
+					
 				}
 				
 				if(obj.hasOwnProperty("src")){
-					global.dojoConfig = global.config.dojoConfig;
 					staticObj._importScript(obj.src);
 				}
 			}

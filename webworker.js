@@ -48,7 +48,7 @@ define([
 							"relativePath": require.toUrl("./"),
 							"dojoConfig": dojoConfig
 						}
-					})
+					});
 				}
 			}
 		},
@@ -60,7 +60,7 @@ define([
 			}
 			
 			if(!this._handleConsole(messageObj)){
-				//console.log('Worker said: ', messageObj);	
+				// Do something else when not console message
 			}
 		},
 		
