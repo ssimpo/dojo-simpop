@@ -1,3 +1,6 @@
+// dependancies:
+//		https://bitbucket.org/ssimpo/dojo-lib
+
 define([
 	"dojo/has",
 	"dojo/_base/kernel",

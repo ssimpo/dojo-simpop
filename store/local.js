@@ -1,3 +1,6 @@
+// dependancies:
+//		https://bitbucket.org/ssimpo/dojo-lib
+
 define([
 	"dojo/_base/declare",
 	"dojo/store/Memory",
