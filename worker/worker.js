@@ -37,6 +37,7 @@ var dojoWorker = function(){
 		_importScript: function(src){
 			var path = staticObj._getPathPath(src);
 			var query = staticObj._getPathQuery(src);
+			
 			importScripts(path+".js"+query);
 		},
 		

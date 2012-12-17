@@ -23,7 +23,12 @@ define([
 		"worker": null,
 		
 		constructor: function(){
-			lang.mixin(this, arguments[0]);
+			if(arguments.length > 0){
+				for(var key in arguments[0]){
+					this[key] = arguments[0][key];
+				}
+			}
+			
 			this._init(arguments);
 		},
 		

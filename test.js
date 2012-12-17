@@ -5,7 +5,7 @@ require([
 	request, lang
 ){
 	request(
-		"/getService.json", {
+		"/test/stephen/pin.nsf/getService?openagent&id=DD0C5C64625A045380257A48002B0D32", {
 		//"handleAs": "text",
 			"handleAs": "json",
 			"preventCache": true
@@ -13,11 +13,6 @@ require([
 	).then(
 		function(data){
 			postMessage(data);
-			var gb = Function('return this')() || (42, eval)('this');
-			
-			for(var prop in gb){
-				console.log(prop);
-			}
 		},
 		function(err){
 			console.error(err);
