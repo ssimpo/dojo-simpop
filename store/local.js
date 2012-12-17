@@ -8,9 +8,10 @@ define([
 	"dojo/_base/lang",
 	"lib/lzw",
 	"lib/aes",
-	"lib/md5"
+	"lib/md5",
+	"dojo/json"
 ], function(
-	declare, store, aspect, lang, lzw, aes, md5
+	declare, store, aspect, lang, lzw, aes, md5, JSON
 ){
 	"use strict";
 	
@@ -48,11 +49,11 @@ define([
 		_initLocalstore: function(){
 			if(this.sessionOnly){
 				if(sessionStorage){
-					this._localStore  = sessionStorage;
+					this._localStore = sessionStorage;
 				}
 			}else{
 				if(localStorage){
-					this._localStore  = localStorage;
+					this._localStore = localStorage;
 				}
 			}
 		},
@@ -67,8 +68,13 @@ define([
 			doFullClear = ((doFullClear == undefined) ? false : doFullClear);
 			var ids = this._getIdArrayFromStorage();
 			
-			for(var n = 0; n < this._localStore.length; n++){
-				this._removeItem(ids[n])
+			if(!doFullClear){
+				for(var n = 0; n < this._localStore.length; n++){
+					this._removeItem(ids[n], doFullClear);
+				}
+			}else{
+				this.clear();
+				this._localStore.clear();
 			}
 		},
 		
@@ -153,13 +159,21 @@ define([
 		_jsonParse: function(value){
 			var nValue = lzw.decode(value);
 			if(this._isJsonObject(nValue)){
-				return JSON.parse(nValue);
+				try{
+					return JSON.parse(nValue);
+				}catch(e){
+					return null;
+				}
 			}
 			
 			nValue = aes.decrypt(value, this._encryptionKey, 256);
 			nValue = lzw.decode(nValue);
 			if(this._isJsonObject(nValue)){
-				return JSON.parse(nValue);
+				try{
+					return JSON.parse(nValue);
+				}catch(e){
+					return null;
+				}
 			}
 			
 			return value;
