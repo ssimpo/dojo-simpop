@@ -41,38 +41,7 @@ var console = {
 		}
 	},
 	_convertErrorObjectToString: function(obj){
-		if(obj.hasOwnProperty("response")){
-			obj.message = obj.response
-		}
-		if(obj.hasOwnProperty("code")){
-			obj.number = obj.code
-		}
-		
-		var errMessage = "Error"
-		if(obj.hasOwnProperty("number") || obj.hasOwnProperty("lineNumber")){
-			errMessage += ": ("
-			if(obj.hasOwnProperty("number")){
-				errMessage += obj.number.toString();
-			}
-			if(obj.hasOwnProperty("number") && obj.hasOwnProperty("lineNumber")){
-				errMessage += " - "
-			}
-			if(obj.hasOwnProperty("lineNumber")){
-				errMessage += "LineNo: " + obj.lineNumber.toString();
-			}
-			errMessage += ") "
-		}else{
-			errMessage += ": "
-		}
-		
-		if(obj.hasOwnProperty("message")){
-			errMessage += obj.message
-		}
-		if(obj.hasOwnProperty("fileName")){
-			errMessage += " (" + obj.fileName + ")"
-		}
-		
-		return errMessage;
+		return obj.toString();
 	},
 	_isErrorObject: function(obj){
 		if(typeof obj === "object"){
