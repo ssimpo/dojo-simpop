@@ -162,7 +162,7 @@ define([
 				try{
 					return JSON.parse(nValue);
 				}catch(e){
-					return null;
+					return undefined;
 				}
 			}
 			
@@ -172,7 +172,7 @@ define([
 				try{
 					return JSON.parse(nValue);
 				}catch(e){
-					return null;
+					return undefined;
 				}
 			}
 			
