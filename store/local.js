@@ -77,6 +77,7 @@ define([
 				
 				this._populateStoreFromLocal(ids);
 			}else{
+				console.log("DONE POPULATION");
 				clearInterval(this._initPopulateInterval);
 			}
 		},
