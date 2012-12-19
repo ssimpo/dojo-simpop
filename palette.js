@@ -62,7 +62,8 @@ define([
 		
 		_getColourProfile: function(profile){
 			var colourProfile;
-			if(profile.devices.hasOwnProperty(this.device)){
+			
+			if(this._hasOwnProperty(profile.devices, this.device)){
 				colourProfile = profile.devices[this.device];
 			}else{
 				colourProfile = profile.devices["default"];
@@ -70,6 +71,10 @@ define([
 			
 			return colourProfile;
 
+		},
+		
+		_hasOwnProperty: function(obj, propName){
+			return Object.prototype.hasOwnProperty.call(obj, propName);
 		}
 	});
     

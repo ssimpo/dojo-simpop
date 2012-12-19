@@ -27,54 +27,101 @@ define([
 		"_orginalAdd": {},
 		"_orginalRemove": {},
 		
+		"_idCache": [],
+		"_initPopulateInterval": null,
+		"_trottle": 100,
+		"_slicer": 100,
+		
 		constructor: function(args){
 			this._init(args);
+			
 			if(this._localStore){
-				this._populateStoreFromLocal();
-				this._attachAspects();
+				try{
+					this._initPopulation();
+					this._attachAspects();
+				}catch(e){
+					console.info("Could not load and interface "+((this.sessionOnly)?"SessionStorage":"LocalStorage")+".");
+				}
 			}
 		},
 		
 		_init: function(args){
-			if(this._isObject(args)){
-				for(var key in args){
-					this[key] = args[key];
+			try{
+				if(this._isObject(args)){
+					for(var key in args){
+						this[key] = args[key];
+					}
 				}
-			}
 			
-			this._encryptionKey = md5(this.id);
-			this._initLocalstore();
+				this._encryptionKey = md5(this.id);
+				this._initLocalstore();
+			}catch(e){
+				console.info("Could inititiate the dojo local store.");
+			}
+		},
+		
+		_initPopulation: function(){
+			this._idCache = this._getIdArrayFromStorage();
+			this._initPopulateInterval = setInterval(
+				lang.hitch(this, this._populate), this._trottle
+			);
+		},
+		
+		_populate: function(){
+			if(this._idCache.length > 0){
+				var ids = new Array();
+				
+				for(var i = 0; ((i < this._idCache.length) && (i < this._slicer)); i++){
+					ids.push(this._idCache.shift());
+				}
+				
+				this._populateStoreFromLocal(ids);
+			}else{
+				clearInterval(this._initPopulateInterval);
+			}
 		},
 		
 		_initLocalstore: function(){
-			if(this.sessionOnly){
-				if(sessionStorage){
-					this._localStore = sessionStorage;
+			try{
+				if(this.sessionOnly){
+					if(sessionStorage){
+						this._localStore = sessionStorage;
+					}
+				}else{
+					if(localStorage){
+						this._localStore = localStorage;
+					}
 				}
-			}else{
-				if(localStorage){
-					this._localStore = localStorage;
-				}
+			}catch(e){
+				console.info("Could not initiate browser storage.")
 			}
 		},
 		
 		_attachAspects: function(){
-			aspect.around(this, "put", lang.hitch(this, this._localPut));
-			aspect.around(this, "add", lang.hitch(this, this._localPut));
-			aspect.around(this, "remove", lang.hitch(this, this._localRemove));
+			try{
+				aspect.around(this, "put", lang.hitch(this, this._localPut));
+				aspect.around(this, "add", lang.hitch(this, this._localPut));
+				aspect.around(this, "remove", lang.hitch(this, this._localRemove));
+			}catch(e){
+				console.info("Could not obtain aspects for dojo store.")
+			}
 		},
 		
 		clear: function(doFullClear){
-			doFullClear = ((doFullClear == undefined) ? false : doFullClear);
-			var ids = this._getIdArrayFromStorage();
+			try{
+				doFullClear = ((doFullClear == undefined) ? false : doFullClear);
+				var ids = this._getIdArrayFromStorage();
 			
-			if(!doFullClear){
-				for(var n = 0; n < this._localStore.length; n++){
-					this._removeItem(ids[n], doFullClear);
+				if(!doFullClear){
+					for(var n = 0; n < this._localStore.length; n++){
+						this._removeItem(ids[n], doFullClear);
+					}
+				}else{
+					this.clear();
+					this._localStore.clear();
 				}
-			}else{
-				this.clear();
-				this._localStore.clear();
+			}catch(e){
+				console.info("Could not clear the storage.")
 			}
 		},
 		
@@ -100,83 +147,135 @@ define([
 		},
 		
 		_getIdArrayFromStorage: function(){
-			var ids = new Array();
-			for(var n = 0; n < this._localStore.length; n++){
-				ids.push(this._localStore.key(n));
+			try{
+				var ids = new Array();
+				for(var n = 0; n < this._localStore.length; n++){
+					ids.push(this._localStore.key(n));
+				}
+				return ids;
+			}catch(e){
+				console.info("Could not obtain an ID-array for the browser cache.");
+				return [];
 			}
-			return ids;
 		},
 		
-		_populateStoreFromLocal: function(){
-			for(var n = 0; n < this._localStore.length; n++){
-				var id = this._localStore.key(n);
-				var obj = this._getLocalObjectByKey(id);
+		_populateStoreFromLocal: function(ids){
+			try{
+				for(var n = 0; n < ids.length; n++){
+					//var id = this._localStore.key(n);
+					var id = ids[n];
+					var obj = this._getLocalObjectByKey(id);
 				
-				if(this._isObject(obj)){
-					this._copyLocalObjectToMemory(obj);
+					if(this._isObject(obj)){
+						this._copyLocalObjectToMemory(obj);
+					}
 				}
+			}catch(e){
+				console.info("Could not populate memory store from browser cache.");
 			}
 		},
 		
 		_copyLocalObjectToMemory: function(obj){
-			if(this._getStoreIdForObject(obj) == this.id){
-				var obj2 = lang.clone(obj);
-				obj2.id = obj2.id.replace("_"+obj2._storeUNID,"");
-				delete obj2._storeUNID;
-				this.put(obj2, {"id": obj2.id, "overwrite": true});
+			try{
+				if(this._getStoreIdForObject(obj) == this.id){
+					var obj2 = lang.clone(obj);
+					obj2.id = obj2.id.replace("_"+obj2._storeUNID,"");
+					delete obj2._storeUNID;
+					this.put(obj2, {"id": obj2.id, "overwrite": true});
+				}
+			}catch(e){
+				console.info("Could not copy cached object to the dojo memory store.");
 			}
 		},
 		
 		_copyMemoryObjectToLocal: function(obj){
-			var obj2 = lang.clone(obj);
-			obj2._storeUNID = this.id;
-			obj2.id = obj2.id+"_"+obj2._storeUNID;
+			try{
+				var obj2 = lang.clone(obj);
+				obj2._storeUNID = this.id;
+				obj2.id = obj2.id+"_"+obj2._storeUNID;
 			
-			var jsonString = JSON.stringify(obj2);
-			if(this.compress){
-				jsonString = lzw.encode(jsonString);
+				var jsonString = this._stringifyWithCompressEncrypt(obj2);
+				this._localStore.setItem(obj2.id, jsonString);
+			}catch(e){
+				console.info("Could not transferre dojo store object to browser cache.");
 			}
-			if(this.encrypt){
-				jsonString = aes.encrypt(
-					jsonString,
-					this._encryptionKey,
-					256
-				);
-			}
+		},
+		
+		_stringifyWithCompressEncrypt: function(obj){
+			try{
+				var jsonString = JSON.stringify(obj);
+				if(this.compress){
+					jsonString = lzw.encode(jsonString);
+				}
+				if(this.encrypt){
+					this.jsonString = _encryptString(jsonString);
+				}
 			
-			this._localStore.setItem(obj2.id, jsonString);
+				return jsonString;
+			}catch(e){
+				console.info("Could stringify (with compression & encyptrion) the supplied object.");
+				return JSON.stringify(obj);
+			}
+		},
+		
+		_encryptString: function(string){
+			try{
+				return aes.encrypt(string, this._encryptionKey, 256);
+			}catch(e){
+				console.info("Could not encrypt the suppplied string");
+				return string;
+			}
 		},
 		
 		_getLocalObjectByKey: function(id){
-			var obj = this._jsonParse(this._localStore.getItem(id));
-			if(this._isObject(obj)){
-				obj.id = id;
-			}
+			try{
+				var obj = this._jsonParse(this._localStore.getItem(id));
+				if(this._isObject(obj)){
+					obj.id = id;
+				}
 			
-			return obj;
+				return obj;
+			}catch(e){
+				console.info("Could not get local object from database using supplied key.");
+				return {};
+			}
 		},
 		
 		_jsonParse: function(value){
-			var nValue = lzw.decode(value);
-			if(this._isJsonObject(nValue)){
-				try{
-					return JSON.parse(nValue);
-				}catch(e){
-					return undefined;
-				}
+			if((value === "")|(value === undefined)||(value === null)){
+				return "";
 			}
 			
-			nValue = aes.decrypt(value, this._encryptionKey, 256);
-			nValue = lzw.decode(nValue);
-			if(this._isJsonObject(nValue)){
-				try{
-					return JSON.parse(nValue);
-				}catch(e){
-					return undefined;
+			var nValue = this._uncompressAndDecrypt(value);
+			try{
+				if(this._isJsonObject(nValue)){
+					nValue = JSON.parse(value);
 				}
+			}catch(e){
+				console.info("could JSON parse the supplied value.");
+				nValue = value;
 			}
 			
-			return value;
+			return nValue;
+		},
+		
+		_uncompressAndDecrypt: function(value){
+			var nValue = value;
+			try{
+				if(this.compress && this.encrypt){
+					nValue = aes.decrypt(value, this._encryptionKey, 256);
+					nValue = lzw.decode(nValue);
+				}else if(this.compress && !this.encrypt){
+					nValue = lzw.decode(value);
+				}else if(!this.compress && this.encrypt){
+					nValue = aes.decrypt(value, this._encryptionKey, 256);
+				}
+			}catch(e){
+				console.info("could not uncompress/decrypt the supplied value.");
+				nValue = value;
+			}
+			
+			return nValue;
 		},
 		
 		_isJsonObject: function(value){
@@ -184,12 +283,16 @@ define([
 		},
 		
 		_getStoreIdForObject: function(obj){
-			if(this._isObject(obj)){
-				if(this.id != ""){
-					if(obj.hasOwnProperty("_storeUNID")){
-						return obj._storeUNID;
+			try{
+				if(this._isObject(obj)){
+					if(this.id != ""){
+						if(this._hasOwnProperty(obj,"_storeUNID")){
+							return obj._storeUNID;
+						}
 					}
 				}
+			}catch(e){
+				console.info("Could not get ID from supplied object.");
 			}
 			
 			return "";
@@ -223,6 +326,10 @@ define([
 				
 				return result;
 			};
+		},
+		
+		_hasOwnProperty: function(obj, propName){
+			return Object.prototype.hasOwnProperty.call(obj, propName);
 		}
 	});
 	

@@ -145,12 +145,16 @@ define([
 			var hasAll = true;
 			
 			array.forEach(props, function(prop){
-				if(!obj.hasOwnProperty(prop)){
+				if(!this._hasOwnProperty(obj, prop)){
 					hasAll = false;
 				}
 			})
 			
 			return hasAll;
+		},
+		
+		_hasOwnProperty: function(obj, propName){
+			return Object.prototype.hasOwnProperty.call(obj, propName);
 		},
 		
 		_selector: function(event){

@@ -3,6 +3,10 @@ if (console && !orginalConsole) var orginalConsole = console;
 var console = {
 	_global: Function('return this')() || (42, eval)('this'),
 	
+	_hasOwnProperty: function(obj, propName){
+		return Object.prototype.hasOwnProperty.call(obj, propName);
+	},
+	
 	log: function(){
 		var ary = new Array();
 		for(var i = 0; i < arguments.length; i++){
@@ -45,7 +49,7 @@ var console = {
 	},
 	_isErrorObject: function(obj){
 		if(typeof obj === "object"){
-			return ((obj.hasOwnProperty("response") && obj.hasOwnProperty("fileName") && obj.hasOwnProperty("lineNumber")) || (obj.hasOwnProperty("message") && obj.hasOwnProperty("code")));
+			return ((console._hasOwnProperty(obj, "response") && console._hasOwnProperty(obj, "fileName") && console._hasOwnProperty(obj, "lineNumber")) || (console._hasOwnProperty(obj, "message") && console._hasOwnProperty(obj, "code")));
 		}else{
 			return false;
 		}

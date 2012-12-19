@@ -110,6 +110,10 @@ define([
 			return values.join(",");
 		},
 		
+		_hasOwnProperty: function(obj, propName){
+			return Object.prototype.hasOwnProperty.call(obj, propName);
+		},
+		
 		_setValueAttr: function(value){
 			this.reset();
 			
@@ -118,7 +122,7 @@ define([
 			}else{
 				var values = value.split(",");
 				array.forEach(values, function(label){
-					if(this._checkboxes.hasOwnProperty(label)){
+					if(this._hasOwnProperty(this._checkboxes, label)){
 						this._checkboxes[label].set("checked", true);
 					}
 				}, this);
