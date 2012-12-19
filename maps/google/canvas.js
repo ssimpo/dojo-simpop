@@ -32,7 +32,6 @@ define([
 		"callback": function(){},
 		
 		postCreate: function(){
-			console.log("HELLO");
 			this._init();
 		},
 		

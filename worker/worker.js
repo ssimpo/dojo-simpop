@@ -12,13 +12,13 @@ var dojoWorker = function(){
 			if(staticObj._isObject(obj)){
 				global.dojoConfig = obj.dojoConfig;
 				
-				if(obj.hasOwnProperty("relativePath")){
+				if(this._hasOwnProperty(obj, "relativePath")){
 					staticObj.relativePath = obj.relativePath;
 					staticObj._loadIncludes();
 					
 				}
 				
-				if(obj.hasOwnProperty("src")){
+				if(this._hasOwnProperty(obj, "src")){
 					staticObj._importScript(obj.src);
 				}
 			}
@@ -65,13 +65,21 @@ var dojoWorker = function(){
 		
 		_isObject: function(obj){
 			return (Object.prototype.toString.call(obj) === '[object Object]');
+		},
+		
+		_hasOwnProperty: function(obj, propName){
+			return Object.prototype.hasOwnProperty.call(obj, propName);
 		}
 	};
 	
-	global.addEventListener('message', function(e) {
+	global.addEventListener('message', function(e){
+		function hasOwnProperty(obj, propName){
+			return Object.prototype.hasOwnProperty.call(obj, propName);
+		}
+		
 		var message = e.data;
 		if(staticObj._isObject(message)){
-			if(message.hasOwnProperty("type") && message.hasOwnProperty("message")){
+			if(hasOwnProperty(message, "type") && hasOwnProperty(message, "message")){
 				if(message.type == "init"){
 					staticObj._init(message.message);
 				}
@@ -90,10 +98,13 @@ var dojoWorker = function(){
 				"message": obj
 			};
 		}
+		function hasOwnProperty(obj, propName){
+			return Object.prototype.hasOwnProperty.call(obj, propName);
+		}
 		
 		var formatted = true;
 		if(_isObject(obj)){
-			if(!obj.hasOwnProperty("type") || !obj.hasOwnProperty("message")){
+			if(!hasOwnProperty(obj, "type") || !hasOwnProperty(obj, "message")){
 				obj = _formatMessage(obj);
 			}
 		}else{

@@ -66,7 +66,7 @@ define([
 			
 			if(!this._handleConsole(messageObj)){
 				if(this._isObject(messageObj)){
-					if(messageObj.hasOwnProperty("type") && messageObj.hasOwnProperty("message")){
+					if(this._hasOwnProperty(messageObj, "type") && this._hasOwnProperty(messageObj, "message")){
 						if(messageObj.type == "message"){
 							on.emit(this, "message", {
 								"bubbles": false,
@@ -90,9 +90,9 @@ define([
 				(Object.prototype.toString.call(messageObj) === '[object Object]')
 			){
 				if(
-					(messageObj.hasOwnProperty("type"))
+					(this._hasOwnProperty(messageObj, "type"))
 					&&
-					(messageObj.hasOwnProperty("message"))
+					(this._hasOwnProperty(messageObj, "message"))
 				){
 					if(messageObj.type == "log"){
 						this._callConsole("log", messageObj.message);
@@ -149,6 +149,10 @@ define([
 					console.error("Tried to post a message to a worker that has not been initialized.");
 				}
 			}
+		},
+		
+		_hasOwnProperty: function(obj, propName){
+			return Object.prototype.hasOwnProperty.call(obj, propName);
 		}
 		
 	});
