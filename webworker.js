@@ -141,10 +141,13 @@ define([
 			return message;
 		},
 		
+		//_messageCounter:0,
 		postMessage: function(message){
 			if(has("webworker")){
 				if(this.worker !== null){
+					//this._messageCounter++;
 					this.worker.postMessage(message);
+					//console.log("MESSAGE COUNT", this._messageCounter, message.type);
 				}else{
 					console.error("Tried to post a message to a worker that has not been initialized.");
 				}
