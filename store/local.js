@@ -9,9 +9,11 @@ define([
 	"lib/lzw",
 	"lib/aes",
 	"lib/md5",
-	"dojo/json"
+	"dojo/json",
+	"dojo/topic",
+	"dojo/sniff"
 ], function(
-	declare, store, aspect, lang, lzw, aes, md5, JSON
+	declare, store, aspect, lang, lzw, aes, md5, JSON, topic, sniff
 ){
 	"use strict";
 	
@@ -29,7 +31,7 @@ define([
 		
 		"_idCache": [],
 		"_initPopulateInterval": null,
-		"_trottle": 100,
+		"_trottle": 120,
 		"_slicer": 100,
 		
 		constructor: function(args){
@@ -61,6 +63,9 @@ define([
 		},
 		
 		_initPopulation: function(){
+			if(!sniff("ie")){
+				this._trottle /= 3;
+			}
 			this._idCache = this._getIdArrayFromStorage();
 			this._initPopulateInterval = setInterval(
 				lang.hitch(this, this._populate), this._trottle
@@ -77,8 +82,8 @@ define([
 				
 				this._populateStoreFromLocal(ids);
 			}else{
-				console.log("DONE POPULATION");
 				clearInterval(this._initPopulateInterval);
+				topic.publish("/simpo/store/local/databaseReady");
 			}
 		},
 		
