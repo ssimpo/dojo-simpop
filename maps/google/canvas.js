@@ -30,6 +30,7 @@ define([
 		"_map": {},
 		"_geoCoder": {},
 		"callback": function(){},
+		"_points": [],
 		
 		postCreate: function(){
 			this._init();
@@ -52,6 +53,13 @@ define([
 			}
 		},
 		
+		clear: function(){
+			while(this._points.length > 0){
+				var point = this._points.shift();
+				point.setMap(null);
+			}
+		},
+		
 		plot: function(lat, lng){
 			var marker = new google.maps.Marker({
 				"map": this._map
@@ -65,6 +73,7 @@ define([
 				var latLng = new google.maps.LatLng(lat, lng);
 				marker.setPosition(latLng);
 			}
+			this._points.push(marker);
 		},
 		
 		_isNumber: function(value){
