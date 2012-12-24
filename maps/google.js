@@ -37,7 +37,6 @@ define([
 		},
 		
 		_callback: function(){
-			console.log("GOT MAPS API!");
 			this.callback(google.maps);
 		}
 	});
