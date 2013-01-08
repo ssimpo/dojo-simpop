@@ -31,8 +31,8 @@ define([
 		
 		"_idCache": [],
 		"_initPopulateInterval": null,
-		"_trottle": 120,
-		"_slicer": 100,
+		"_trottle": 50,
+		"_slicer": 250,
 		
 		constructor: function(args){
 			this._init(args);
@@ -326,6 +326,7 @@ define([
 			
 			return function(id){
 				var result = orginalRemove(id);
+				
 				if(result){
 					this._localStore.removeItem(id+"_"+this.id);
 				}
