@@ -75,11 +75,18 @@ define([
 		//		The container node for onscreen columns.
 		"containerNode": null,
 		
+		// _parentNode: object XMLDomNode
+		//		The current parent of domNode, used to move lists when
+		//		domNode moves.
+		"_parentNode": null,
+		
+		
 		postCreate: function(){
 			this._init();
 		},
 		
 		_init: function(){
+			this._parentNode = this.domNode.parentNode;
 			this._setClass();
 			this._setListTag();
 			this._hideNode();
@@ -248,6 +255,7 @@ define([
 			//		as well as declarative in the html.
 			
 			this._clearInterval();
+			this._checkParentNode();
 			var colCheck = this._checkColumnCount();
 			var items = this._getNewItems();
 			if((items.length > 0) || colCheck){
@@ -256,6 +264,22 @@ define([
 			
 			this._setupInterval();
 		},
+		
+		_checkParentNode: function(){
+			if(this.domNode.parentNode !== this._parentNode){
+				this._parentNode = this.domNode.parentNode;
+				domConstr.place(this.containerNode, this.domNode, "after");
+				domConstr.place(this._holdingArea, this.domNode, "after");
+				this._redraw();
+			}
+		},
+		
+		/*_redraw: function() {
+			var n = document.createTextNode(' ');
+			this.containerNode.appendChild(n);
+			setTimeout(function(){ n.parentNode.removeChild(n) }, 0);
+			return this.containerNode;
+		},*/
 		
 		_checkColumnCount: function(){
 			if (this._lists.length !== this.cols){
