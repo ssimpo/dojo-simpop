@@ -71,6 +71,10 @@ define([
 		//		Node used to hold new items before applying to the screen.
 		"_holdingArea": null,
 		
+		// containerNode: object XMLDomNode
+		//		The container node for onscreen columns.
+		"containerNode": null,
+		
 		postCreate: function(){
 			this._init();
 		},
@@ -96,7 +100,7 @@ define([
 		
 		_setListTag: function(){
 			if(this.listTag === null){
-				this.listTag = this.domNode.tagName;
+				this.listTag = this.domNode.tagName.toLowerCase();
 			}
 		},
 		
@@ -179,11 +183,13 @@ define([
 			// summary:
 			//		Create the main container for the columns.
 			
-			return domConstr.create(
+			this.containerNode = domConstr.create(
 				"div", {
 					"class": "simpoLayoutColumnList"
 				}, this.domNode, "after"
-			)
+			);
+			
+			return this.containerNode;
 		},
 		
 		_createListMixin: function(){
@@ -240,6 +246,7 @@ define([
 			if(items.length > 0){
 				this._moveNewItems(items);
 			}
+			
 			this._setupInterval();
 		},
 		
@@ -257,6 +264,19 @@ define([
 			return newItems;
 		},
 		
+		_getNewAndCurrentItems: function(){
+			var currentItems = new Array();
+			array.forEach(this._lists, function(list){
+				currentItems = currentItems.concat(
+					this._getNewItems(list)
+				)
+			}, this);
+			
+			return currentItems.concat(
+				this._getNewItems(this._holdingArea)
+			);
+		},
+		
 		_moveNewItems: function(items){
 			// summary:
 			//		Move new items added to the domNode to the correct column.
@@ -265,7 +285,7 @@ define([
 			
 			if(this._lists.length > 0){
 				this._moveItemsToHoldingArea(items);
-				items = this._getNewItems(this._holdingArea);
+				items = this._getNewAndCurrentItems();
 				this._reWrapColumns(items);
 			}
 		},
