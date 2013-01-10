@@ -15,8 +15,6 @@
 define([
 	"dojo/_base/declare",
 	"dijit/_WidgetBase",
-	"dojo/i18n",
-	"dojo/i18n!./nls/columnList",
 	"dojo/_base/lang",
 	"dojo/dom-attr",
 	"dojo/dom-construct",
@@ -25,8 +23,7 @@ define([
 	"dojo/query",
 	"dojo/_base/array"
 ], function(
-	declare, _widget, i18n, strings,
-	lang, domAttr, domConstr, domStyle, domClass, $, array
+	declare, _widget, lang, domAttr, domConstr, domStyle, domClass, $, array
 ) {
 	"use strict";
 	
