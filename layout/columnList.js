@@ -67,6 +67,10 @@ define([
 		//		Items currently showing om the screen.
 		"_items": [],
 		
+		// _holdingArea: object XMLDomNode
+		//		Node used to hold new items before applying to the screen.
+		"_holdingArea": null,
+		
 		postCreate: function(){
 			this._init();
 		},
@@ -74,9 +78,10 @@ define([
 		_init: function(){
 			this._setClass();
 			this._setListTag();
-			this._hideDomNode();
+			this._hideNode();
+			this._setupHoldingArea();
+			this._setupColumns();
 			this._setupInterval();
-			this._setColumns();
 		},
 		
 		_setClass: function(){
@@ -146,7 +151,7 @@ define([
 			
 		},
 		
-		_setColumns: function(){
+		_setupColumns: function(){
 			// summary:
 			//		Create the list columns.
 			
@@ -160,6 +165,14 @@ define([
 					)
 				);
 			}
+		},
+		
+		_setupHoldingArea: function(){
+			var listMixin = this._createListMixin();
+			this._holdingArea = domConstr.create(
+				this.listTag, listMixin, this.domNode, "after"
+			);
+			this._hideNode(this._holdingArea);
 		},
 		
 		_setupContainer: function(){
@@ -194,11 +207,14 @@ define([
 			return listMixin;
 		},
 		
-		_hideDomNode: function(){
+		_hideNode: function(node){
 			// summary:
 			//		Hide the main domNode for this widget.
+			// node: object XMLDomNode | undefined
+			//		The node to hide, defaults to this.domNode.
 			
-			domStyle.set(this.domNode, {
+			node = ((node === undefined) ? this.domNode : node);
+			domStyle.set(node, {
 				"visibility": "hidden",
 				"position": "absolute",
 				"left": "0px",
@@ -220,38 +236,57 @@ define([
 			//		as well as declarative in the html.
 			
 			this._clearInterval();
-			var html = domAttr.get(this.domNode, "innerHTML");
-			if(html !== ""){
-				this._moveNewItems();
-				domConstr.empty(this.domNode);
+			var items = this._getNewItems();
+			if(items.length > 0){
+				this._moveNewItems(items);
 			}
 			this._setupInterval();
 		},
 		
-		_moveNewItems: function(){
+		_getNewItems: function(parentNode){
+			parentNode = ((parentNode === undefined) ? this.domNode : parentNode);
+			
+			var newItems = new Array();
+			var items = $(this.listItemTag, parentNode);
+			array.forEach(items, function(item){
+				if(item.parentNode === parentNode){
+					newItems.push(item);
+				}
+			}, this);
+			
+			return newItems;
+		},
+		
+		_moveNewItems: function(items){
 			// summary:
 			//		Move new items added to the domNode to the correct column.
+			// items: array XMLDomNode()
+			//		Nodes (items) to move to the screen columns.
 			
 			if(this._lists.length > 0){
-				var items = $(this.listItemTag, this.domNode);
-				array.forEach(items, function(item){
-					if(item.parentNode === this.domNode){
-						this._items.push(item);
-					}
-				}, this);
-				this._reWrapColumns();
+				this._moveItemsToHoldingArea(items);
+				items = this._getNewItems(this._holdingArea);
+				this._reWrapColumns(items);
 			}
 		},
 		
-		_reWrapColumns: function(){
+		_moveItemsToHoldingArea: function(items){
+			array.forEach(items, function(item){
+				domConstr.place(item, this._holdingArea, "last");
+			}, this);
+		},
+		
+		_reWrapColumns: function(items){
 			// summary:
 			//		Apply list items to the correct column.
+			// items: array XMLDomNode()
+			//		Nodes (items) to assign to the columns.
 			
-			var colSizes = this._calcColumnSize();
+			var colSizes = this._calcColumnSize(items);
 			var cCol = 1;
 			var cColItem = 1;
 			
-			array.forEach(this._items, function(item, n){
+			array.forEach(items, function(item, n){
 				domConstr.place(item, this._lists[cCol-1], "last");
 				cColItem++;
 				if(cColItem > colSizes[cCol-1]){
@@ -261,13 +296,15 @@ define([
 			}, this);
 		},
 		
-		_calcColumnSize: function(){
+		_calcColumnSize: function(items){
 			// summary:
 			//		Calculate the number of items to apply to each column.
+			// items: array XMLDomNode()
+			//		Current items being assigned to on-screen columns
 			
 			var sizes = new Array();
-			var itemsPerColumn = parseInt((this._items.length / this.cols), 10);
-			var itemsPerRem = (this._items.length % this.cols);
+			var itemsPerColumn = parseInt((items.length / this.cols), 10);
+			var itemsPerRem = (items.length % this.cols);
 			
 			for(var colNo = 0; colNo < this._lists.length; colNo++){
 				sizes[colNo] = itemsPerColumn;
