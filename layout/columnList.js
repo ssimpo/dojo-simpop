@@ -160,15 +160,21 @@ define([
 			//		Create the list columns.
 			
 			var listMixin = this._createListMixin();
-			var container = this._setupContainer();
+			this._setupContainer();
 			
 			for(var i = 1; i <= this.cols; i++){
 				this._lists.push(
-					domConstr.create(
-						this.listTag, listMixin, container
-					)
+					this._createCol(listMixin)
 				);
 			}
+		},
+		
+		_createCol: function(listMixin){
+			listMixin = ((listMixin === undefined) ? {} : listMixin);
+			
+			return domConstr.create(
+				this.listTag, listMixin, this.containerNode
+			);
 		},
 		
 		_setupHoldingArea: function(){
@@ -242,12 +248,61 @@ define([
 			//		as well as declarative in the html.
 			
 			this._clearInterval();
+			var colCheck = this._checkColumnCount();
 			var items = this._getNewItems();
-			if(items.length > 0){
+			if((items.length > 0) || colCheck){
 				this._moveNewItems(items);
 			}
 			
 			this._setupInterval();
+		},
+		
+		_checkColumnCount: function(){
+			if (this._lists.length !== this.cols){
+				if(this.cols > this._lists.length){
+					this._addColumns();
+					return true;
+				}else if(this.cols < this._lists.length){
+					console.log("REDUCE");
+					this._removeColumns();
+					return true;
+				}
+			}
+			
+			return false;
+		},
+		
+		_addColumns: function(){
+			var colsToAdd = (this.cols-this._lists.length);
+			if(colsToAdd > 0){
+				for(var i = 1; i <= colsToAdd; i++){
+					this._lists.push(this._createCol());
+				}
+				this._reCalcColStyle();
+			}
+			
+		},
+		
+		_removeColumns: function(){
+			var colsToRemove = (this._lists.length-this.cols);
+			if(colsToRemove > 0){
+				for(var i = 1; i <= colsToRemove; i++){
+					var cList = this._lists.pop();
+					var items = this._getNewItems(cList);
+					for(var ii = (items.length - 1); ii >= 0; ii--){
+						domConstr.place(items[ii], this._holdingArea, "first");
+					}
+					domConstr.destroy(cList);
+				}
+				this._reCalcColStyle();
+			}
+		},
+		
+		_reCalcColStyle: function(){
+			var mixin = this._createListMixin();
+			array.forEach(this._lists, function(list){
+				domStyle.set(list, mixin.style);
+			}, this);
 		},
 		
 		_getNewItems: function(parentNode){
