@@ -33,8 +33,9 @@ define([
 		"cols": 2,
 		
 		// listTag: string
-		//		The list tag (default = ul), normally ul or ol.
-		"listTag": "ul",
+		//		The list tag, normally ul or ol.  Will take the value of
+		//		domNode tagname if not supplied.
+		"listTag": null,
 		
 		// listItemTag: string
 		//		The list-item tag (default = li).  Should be li unless some
@@ -72,6 +73,7 @@ define([
 		
 		_init: function(){
 			this._setClass();
+			this._setListTag();
 			this._hideDomNode();
 			this._setupInterval();
 			this._setColumns();
@@ -84,6 +86,12 @@ define([
 			var cClass = domAttr.get(this.domNode, "class");
 			if((cClass !== null) && (cClass !== "")){
 				this["class"] = this._appandItem(this["class"], cClass);
+			}
+		},
+		
+		_setListTag: function(){
+			if(this.listTag === null){
+				this.listTag = this.domNode.tagName;
 			}
 		},
 		
