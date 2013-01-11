@@ -9,8 +9,8 @@
 //		Stephen Simpson <me@simpo.org>, <http://simpo.org>
 // todo:
 //		Distribution according to item screen space rather than item number.
-//		Detection of when items less than column number and therefore less columns need drawing.
 //		Better styling of gaps.
+//		Add a clear both to the end of the containerNode.
 define([
 	"dojo/_base/declare",
 	"dijit/_WidgetBase",
@@ -27,9 +27,15 @@ define([
 	"use strict";
 	
 	var construct = declare([_widget], {
-		// cols: Integer
+		// cols: integer
 		//		Number of columns to display.
 		"cols": 2,
+		
+		// _cols: integer
+		//		Actual number of colunms on-screen, may be different to
+		//		this.cols if the number of items is less than the total
+		//		number of columns.
+		"_cols": 2,
 		
 		// columnTagName: string
 		//		The column tag, normally ul or ol.  Will take the value of
@@ -180,8 +186,9 @@ define([
 			// summary:
 			//		Create the columns.
 			
+			this._cols = this._calcColumnCount();
 			var columnMixin = this._createColumnMixin();
-			for(var i = 1; i <= this.cols; i++){
+			for(var i = 1; i <= this._cols; i++){
 				this._columnNodes.push(
 					this._createNewColumn(columnMixin)
 				);
@@ -253,11 +260,12 @@ define([
 			//		Check if the number of columns has changed.
 			// returns: boolean
 			
-			if (this._columnNodes.length !== this.cols){
-				if(this.cols > this._columnNodes.length){
+			this._cols = this._calcColumnCount();
+			if (this._columnNodes.length !== this._cols){
+				if(this._cols > this._columnNodes.length){
 					this._addColumns();
 					return true;
-				}else if(this.cols < this._columnNodes.length){
+				}else if(this._cols < this._columnNodes.length){
 					this._removeColumns();
 					return true;
 				}
@@ -288,7 +296,7 @@ define([
 			// returns: object
 			//		The object to use in column creation.
 			
-			var width = parseInt((100/this.cols), 10) - this.gap;
+			var width = parseInt((100/this._cols), 10) - this.gap;
 			width = width.toString() + "%";
 			
 			var columnMixin = {
@@ -309,7 +317,7 @@ define([
 			// summary:
 			//		Add a new column, if one is needed.
 			
-			var colsToAdd = (this.cols-this._columnNodes.length);
+			var colsToAdd = (this._cols-this._columnNodes.length);
 			if(colsToAdd > 0){
 				for(var i = 1; i <= colsToAdd; i++){
 					this._columnNodes.push(this._createNewColumn());
@@ -323,7 +331,7 @@ define([
 			// summary:
 			//		Remove a column, if one needs removing.
 			
-			var colsToRemove = (this._columnNodes.length-this.cols);
+			var colsToRemove = (this._columnNodes.length-this._cols);
 			if(colsToRemove > 0){
 				for(var i = 1; i <= colsToRemove; i++){
 					var cCol = this._columnNodes.pop();
@@ -385,6 +393,15 @@ define([
 			);
 		},
 		
+		_getAllCurrentItems: function(){
+			// summary:
+			//		Get all the on-screen and off-screen items.
+			// returns: array() XMLNode()
+			
+			var currentItems = this._getNewAndCurrentItems();
+			return currentItems.concat(this._getNewItems());
+		},
+		
 		_moveNewItems: function(items){
 			// summary:
 			//		Move new items added to the domNode to the correct column.
@@ -429,6 +446,19 @@ define([
 			}, this);
 		},
 		
+		_calcColumnCount: function(){
+			// summary:
+			//		Get the number of columns to display on-screen.
+			// description:
+			//		Get the number of columns to display on-screen.  May be
+			//		less than this.cols if the number of items is less than the
+			//		number of columns.
+			
+			var items = this._getAllCurrentItems();
+			
+			return ((this.cols > items.length) ? items.length : this.cols);
+		},
+		
 		_calcColumnSize: function(items){
 			// summary:
 			//		Calculate the number of items to apply to each column.
@@ -438,8 +468,8 @@ define([
 			//		The sizes of each column.
 			
 			var sizes = new Array();
-			var itemsPerColumn = parseInt((items.length / this.cols), 10);
-			var itemsPerRem = (items.length % this.cols);
+			var itemsPerColumn = parseInt((items.length / this._cols), 10);
+			var itemsPerRem = (items.length % this._cols);
 			
 			for(var colNo = 0; colNo < this._columnNodes.length; colNo++){
 				sizes[colNo] = itemsPerColumn;
