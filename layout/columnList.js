@@ -15,14 +15,16 @@ define([
 	"dojo/_base/declare",
 	"dijit/_WidgetBase",
 	"dojo/_base/lang",
+	"dojo/_base/array",
 	"dojo/dom-attr",
 	"dojo/dom-construct",
 	"dojo/dom-style",
 	"dojo/dom-class",
 	"dojo/query",
-	"dojo/_base/array"
+	"dojo/on"
 ], function(
-	declare, _widget, lang, domAttr, domConstr, domStyle, domClass, $, array
+	declare, _widget, lang, array,
+	domAttr, domConstr, domStyle, domClass, $, on
 ){
 	"use strict";
 	
@@ -85,6 +87,8 @@ define([
 		//		domNode moves.
 		"_parentNode": null,
 		
+		"_itemCount": 0,
+		
 		constructor: function(params, srcNodeRef){
 			if(srcNodeRef === undefined){
 				if(!this._isProperty(params,"columnTagName")){
@@ -136,6 +140,9 @@ define([
 		},
 		
 		_initColumnTagName: function(){
+			// summary:
+			//		Set the type to use for columns.
+			
 			if(this.columnTagName === null){
 				this.columnTagName = this.domNode.tagName.toLowerCase();
 			}
@@ -187,6 +194,10 @@ define([
 			//		Create the columns.
 			
 			this._cols = this._calcColumnCount();
+			if(this.cols !== this._cols){
+				this._emitColumnCountChange(this.cols, this._cols);
+			}
+			
 			var columnMixin = this._createColumnMixin();
 			for(var i = 1; i <= this._cols; i++){
 				this._columnNodes.push(
@@ -207,9 +218,23 @@ define([
 			
 			this._clearInterval();
 			this._checkParentNode();
+			this._checkItemsAddedOrRemoved();
 			var colCheck = this._checkColumnCount();
 			this._checkNewItems(colCheck);
+			this._checkItemsAddedOrRemoved();
 			this._setupInterval();
+		},
+		
+		_checkItemsAddedOrRemoved: function(){
+			var items = this._getCurrentItems();
+			if(items.count !== this._itemCount){
+				if(items.count > this._itemCount){
+					this._emitItemsAdded(items.count - this._itemCount);
+				}else if(items.count < this._itemCount){
+					this._emitItemsRemoved(this._itemCount - items.count);
+				}
+				this._itemCount = items.count;
+			}
 		},
 		
 		_checkNewItems: function(force){
@@ -260,18 +285,24 @@ define([
 			//		Check if the number of columns has changed.
 			// returns: boolean
 			
+			var colCheck = false;
+			var currentColCount = this._columnNodes.length;
 			this._cols = this._calcColumnCount();
 			if (this._columnNodes.length !== this._cols){
 				if(this._cols > this._columnNodes.length){
 					this._addColumns();
-					return true;
+					colCheck = true;
 				}else if(this._cols < this._columnNodes.length){
 					this._removeColumns();
-					return true;
+					colCheck = true;
 				}
 			}
 			
-			return false;
+			if(colCheck){
+				this._emitColumnCountChange(currentColCount, this._cols);
+			}
+			
+			return colCheck;
 		},
 		
 		_createNewColumn: function(columnMixin){
@@ -375,10 +406,9 @@ define([
 			return newItems;
 		},
 		
-		_getNewAndCurrentItems: function(){
+		_getCurrentItems: function(){
 			// summary:
-			//		Get an array of all the new items to add and current
-			//		on-screen items.
+			//		Get an array of all the current on-screen items.
 			// returns: array() XMLNode()
 			
 			var currentItems = new Array();
@@ -388,6 +418,16 @@ define([
 				)
 			}, this);
 			
+			return currentItems;
+		},
+		
+		_getNewAndCurrentItems: function(){
+			// summary:
+			//		Get an array of all the new items to add and current
+			//		on-screen items.
+			// returns: array() XMLNode()
+			
+			var currentItems = this._getCurrentItems();
 			return currentItems.concat(
 				this._getNewItems(this._holdingArea)
 			);
@@ -500,6 +540,51 @@ define([
 				this._intervalFunc = null;
 			}
 			
+		},
+		
+		_emitItemsAdded: function(count){
+			// summary:
+			//		Emit an event to indicate that the number of onscreen items
+			//		has increased.
+			// count: integer
+			//		Number added.
+			
+			on.emit(this, "itemsAdded", {
+				"bubbles": true,
+				"cancelable": false,
+				"numberAdded": count
+			});
+		},
+		
+		_emitItemsRemoved: function(count){
+			// summary:
+			//		Emit an event to indicate that the number of onscreen items
+			//		has decreased.
+			// count: integer
+			//		Number removed
+			
+			on.emit(this, "itemsAdded", {
+				"bubbles": true,
+				"cancelable": false,
+				"numberRemoved": count
+			});
+		},
+		
+		_emitColumnCountChange: function(from, to){
+			// summary:
+			//		Emit an event to indicate that the number of on-screen
+			//		columns has changed.
+			// from: integer
+			//		The previous number of columns.
+			// to: interger
+			//		The new number of columns
+			
+			on.emit(this, "columnCountChange", {
+				"bubbles": true,
+				"cancelable": false,
+				"previousCount": from,
+				"currentCount": to
+			});
 		},
 		
 		_hideNode: function(node){
