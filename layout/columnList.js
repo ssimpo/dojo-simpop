@@ -13,22 +13,21 @@
 //		Add a clear both to the end of the containerNode.
 define([
 	"dojo/_base/declare",
-	"dijit/_WidgetBase",
+	"./_columnListMixin",
 	"dojo/_base/lang",
 	"dojo/_base/array",
 	"dojo/dom-attr",
 	"dojo/dom-construct",
 	"dojo/dom-style",
 	"dojo/dom-class",
-	"dojo/query",
-	"dojo/on"
+	"dojo/query"
 ], function(
-	declare, _widget, lang, array,
+	declare, _columnListMixin, lang, array,
 	domAttr, domConstr, domStyle, domClass, $, on
 ){
 	"use strict";
 	
-	var construct = declare([_widget], {
+	var construct = declare([_columnListMixin], {
 		// cols: integer
 		//		Number of columns to display.
 		"cols": 2,
@@ -58,14 +57,6 @@ define([
 		//		Percentage gap to apply between columns.
 		"gap": 5,
 		
-		// _interval: integer
-		//		Milliseconds between checking for new items added.
-		"_interval": 200,
-		
-		// _intervalFunc: function
-		//		The interval function for checking for new items added.
-		"_intervalFunc": null,
-		
 		// _columnNodes: array()
 		//		Columns currently showing on the screen.
 		"_columnNodes": [],
@@ -81,6 +72,10 @@ define([
 		// containerNode: object XMLNode
 		//		The container node for onscreen columns.
 		"containerNode": null,
+		
+		// widgetNode: object XMLNode
+		//		Node to contain the main widget, seperate from this.domNode
+		"widgetNode": null,
 		
 		// _parentNode: object XMLNode
 		//		The current parent of domNode, used to move columns when
@@ -117,6 +112,7 @@ define([
 			this._parentNode = this.domNode.parentNode;
 			this._initProperties();
 			this._initDom();
+			this._intervalDefaultFunction = this._domCheck;
 			this._setupInterval();
 		},
 		
@@ -133,10 +129,7 @@ define([
 			//		Call all the widget DOM initialization methods.
 			
 			this._hideNode(this.domNode);
-			this._initHoldingArea();
-			this._initContainer();
-			this._initClearNode();
-			this._initColumns();
+			this._initWidgetNode();
 		},
 		
 		_initClass: function(){
@@ -158,6 +151,28 @@ define([
 			}
 		},
 		
+		_initWidgetNode: function(){
+			// summary:
+			//		Create a widgetNode and the contents of that node.
+			// description:
+			//		Create a widgetNode and the contents of that node.  This is
+			//		different to the domNode.  The domNode is hidden and changes
+			//		tracked and moved to the on-screen widget node.  This is so
+			//		lists can be added to, and removed from, via standard Dom
+			//		manipulation methods.
+			
+			if(!this._isElement(this.widgetNode)){
+				this.widgetNode = domConstr.create(
+					"div", {}, this.domNode, "after"
+				);
+			}
+			
+			this._initHoldingArea();
+			this._initContainer();
+			this._initClearNode();
+			this._initColumns();
+		},
+		
 		_initHoldingArea: function(){
 			// summary:
 			//		Create a holding area for column-items before they are
@@ -174,7 +189,7 @@ define([
 			if(!this._isElement(this._holdingArea)){
 				var columnMixin = this._createColumnMixin();
 				this._holdingArea = domConstr.create(
-					this.columnTagName, columnMixin, this.domNode, "after"
+					this.columnTagName, columnMixin, this.widgetNode
 				);
 				this._hideNode(this._holdingArea);
 			}
@@ -192,7 +207,7 @@ define([
 				this.containerNode = domConstr.create(
 					"div", {
 						"class": "simpoLayoutColumnList"
-					}, this.domNode, "after"
+					}, this.widgetNode
 				);
 			}
 			
@@ -292,9 +307,7 @@ define([
 			
 			if(this.domNode.parentNode !== this._parentNode){
 				this._parentNode = this.domNode.parentNode;
-				domConstr.place(this.containerNode, this.domNode, "after");
-				domConstr.place(this._clearNode, this.containerNode, "after");
-				domConstr.place(this._holdingArea, this.domNode, "after");
+				domConstr.place(this.widgetNode, this.domNode, "after");
 				//this._redraw();
 			}
 		},
@@ -545,162 +558,6 @@ define([
 			}
 			
 			return sizes;
-		},
-		
-		_setupInterval: function(){
-			// summary:
-			//		Create interval to check for new elements in the column.
-			
-			this._intervalFunc = setInterval(
-				lang.hitch(this, this._domCheck),
-				this._interval
-			)
-		},
-		
-		_clearInterval: function(){
-			// summary:
-			//		Clear the current interval.
-			
-			if(this._intervalFunc !== null){
-				clearInterval(this._intervalFunc);
-				this._intervalFunc = null;
-			}
-			
-		},
-		
-		_emitItemsAdded: function(count){
-			// summary:
-			//		Emit an event to indicate that the number of onscreen items
-			//		has increased.
-			// count: integer
-			//		Number added.
-			
-			on.emit(this, "itemsAdded", {
-				"bubbles": true,
-				"cancelable": false,
-				"numberAdded": count
-			});
-		},
-		
-		_emitItemsRemoved: function(count){
-			// summary:
-			//		Emit an event to indicate that the number of onscreen items
-			//		has decreased.
-			// count: integer
-			//		Number removed
-			
-			on.emit(this, "itemsAdded", {
-				"bubbles": true,
-				"cancelable": false,
-				"numberRemoved": count
-			});
-		},
-		
-		_emitColumnCountChange: function(from, to){
-			// summary:
-			//		Emit an event to indicate that the number of on-screen
-			//		columns has changed.
-			// from: integer
-			//		The previous number of columns.
-			// to: interger
-			//		The new number of columns
-			
-			on.emit(this, "columnCountChange", {
-				"bubbles": true,
-				"cancelable": false,
-				"previousCount": from,
-				"currentCount": to
-			});
-		},
-		
-		_hideNode: function(node){
-			// summary:
-			//		Hide the main domNode for this widget.
-			// node: object XMLNode | undefined
-			//		The node to hide, defaults to this.domNode.
-			
-			node = ((node === undefined) ? this.domNode : node);
-			domStyle.set(node, {
-				"visibility": "hidden",
-				"position": "absolute",
-				"left": "0px",
-				"top": "0px",
-				"height": "1px",
-				"width": "1px",
-				"overflow": "hidden"
-			});
-		},
-		
-		_appandItem: function(list, item){
-			// summary:
-			//		Append a text item to a text list.
-			// description:
-			//		Append a text item to a text list, will account for
-			//		any duplication removing duplicates.  Will also account
-			//		for the item itself being a list.
-			// list: string
-			//		List to append to.
-			// item: string
-			//		Item to add to the list.
-			// returns: string
-			//		The string list, separated by spaces.
-			
-			var lookup = new Object;
-			var items = split(list, "").concat(split(item, ""));
-			var newList = "";
-			
-			array.forEach(items, function(item){
-				if(!this._isProperty(lookup, item)){
-					if(newList != ""){
-						newlist += " " + item;
-					}else{
-						newlist += item;
-					}
-					lookup[item] = true;
-				}
-			});
-			
-			return newList;
-		},
-		
-		_isProperty: function(obj, propName){
-			// summary:
-			//		Check if an object has a particular property.
-			// obj: object
-			//		The object to test the properties of.
-			// propName: string
-			//		The property to test for.
-			// returns: boolean
-			
-			if(this._isObject(obj)){
-				return Object.prototype.hasOwnProperty.call(obj, propName);
-			}
-			
-			return false;
-		},
-		
-		_isObject: function(value){
-			// summary:
-			//		Test whether the supplied value is an object.
-			// value: mixed
-			//		The value to test.
-			// returns: boolean
-			
-			return ((Object.prototype.toString.call(value) === '[object Object]') || (typeof value === "object"));
-		},
-		
-		_isElement: function(value){
-			// summary:
-			//		Test whether the supplied value is an XMLNode.
-			// value: mixed
-			//		The value to test.
-			// returns: boolean
-			
-			return (
-				(typeof HTMLElement === "object") ?
-					(value instanceof HTMLElement) :
-					(value && typeof value === "object" && value.nodeType === 1 && typeof value.nodeName === "string")
-			);
 		}
 	});
 	
