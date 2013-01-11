@@ -80,6 +80,13 @@ define([
 		//		domNode moves.
 		"_parentNode": null,
 		
+		constructor: function(params, srcNodeRef){
+			if(srcNodeRef === undefined){
+				if(!this._hasProperty(params,"listTag")){
+					this.listTag = "ul";
+				}
+			}
+		},
 		
 		postCreate: function(){
 			this._init();
@@ -270,7 +277,7 @@ define([
 				this._parentNode = this.domNode.parentNode;
 				domConstr.place(this.containerNode, this.domNode, "after");
 				domConstr.place(this._holdingArea, this.domNode, "after");
-				this._redraw();
+				//this._redraw();
 			}
 		},
 		
@@ -424,7 +431,11 @@ define([
 			}
 			
 			return false;
-		}
+		},
+		
+		_isObject: function(value){
+			return ((Object.prototype.toString.call(value) === '[object Object]') || (typeof value === "object"));
+		},
 	});
 	
 	return construct;
