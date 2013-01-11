@@ -42,6 +42,8 @@ define([
 		//		after the columns.
 		"_clearNode": null,
 		
+		"paginationNode": null,
+		
 		_initWidgetNode: function(){
 			// summary:
 			//		Create a widgetNode and the contents of that node.

@@ -21,7 +21,8 @@ define([
 	"dojo/dom-construct",
 	"dojo/dom-style",
 	"dojo/dom-class",
-	"dojo/query"
+	"dojo/query",
+	"dojo/NodeList-manipulate"
 ], function(
 	declare, _columnListMixin, _columnListDomMixin, lang, array,
 	domAttr, domConstr, domStyle, domClass, $, on
@@ -155,6 +156,13 @@ define([
 					this._createNewColumn(columnMixin)
 				);
 			}
+		},
+		
+		clear: function(){
+			console.log("CLEAR");
+			$(this.itemTagName, this._holdingArea).remove();
+			$(this.itemTagName, this.containerNode).remove();
+			$(this.itemTagName, this.domNode).remove();
 		},
 		
 		_domCheck: function(){
