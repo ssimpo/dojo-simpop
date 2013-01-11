@@ -31,15 +31,15 @@ define([
 		//		Number of columns to display.
 		"cols": 2,
 		
-		// listTag: string
+		// columnTagName: string
 		//		The column tag, normally ul or ol.  Will take the value of
 		//		domNode tagname if not supplied.
-		"listTag": null,
+		"columnTagName": null,
 		
-		// listItemTag: string
+		// itemTagName: string
 		//		The column-item tag (default = li).  Should be li unless some
-		//		clever is required in conjunction with listTag.
-		"listItemTag": "li",
+		//		clever is required in conjunction with columnTagName.
+		"itemTagName": "li",
 		
 		// class: string
 		//		Class to apply to each column item (will add to any class element
@@ -58,9 +58,9 @@ define([
 		//		The interval function for checking for new items added.
 		"_intervalFunc": null,
 		
-		// _lists: array()
+		// _columnNodes: array()
 		//		Columns currently showing on the screen.
-		"_lists": [],
+		"_columnNodes": [],
 		
 		// _items: array()
 		//		Items currently showing om the screen.
@@ -81,8 +81,8 @@ define([
 		
 		constructor: function(params, srcNodeRef){
 			if(srcNodeRef === undefined){
-				if(!this._isProperty(params,"listTag")){
-					this.listTag = "ul";
+				if(!this._isProperty(params,"columnTagName")){
+					this.columnTagName = "ul";
 				}
 			}
 		},
@@ -106,7 +106,7 @@ define([
 			//		Call all the widget property initialization methods.
 			
 			this._initClass();
-			this._initListTag();
+			this._initColumnTagName();
 		},
 		
 		_initDom: function(){
@@ -129,9 +129,9 @@ define([
 			}
 		},
 		
-		_initListTag: function(){
-			if(this.listTag === null){
-				this.listTag = this.domNode.tagName.toLowerCase();
+		_initColumnTagName: function(){
+			if(this.columnTagName === null){
+				this.columnTagName = this.domNode.tagName.toLowerCase();
 			}
 		},
 		
@@ -149,9 +149,9 @@ define([
 			//		The new holding-area element.
 			
 			if(!this._isElement(this._holdingArea)){
-				var listMixin = this._createColumnMixin();
+				var columnMixin = this._createColumnMixin();
 				this._holdingArea = domConstr.create(
-					this.listTag, listMixin, this.domNode, "after"
+					this.columnTagName, columnMixin, this.domNode, "after"
 				);
 				this._hideNode(this._holdingArea);
 			}
@@ -180,10 +180,10 @@ define([
 			// summary:
 			//		Create the columns.
 			
-			var listMixin = this._createColumnMixin();
+			var columnMixin = this._createColumnMixin();
 			for(var i = 1; i <= this.cols; i++){
-				this._lists.push(
-					this._createNewColumn(listMixin)
+				this._columnNodes.push(
+					this._createNewColumn(columnMixin)
 				);
 			}
 		},
@@ -253,11 +253,11 @@ define([
 			//		Check if the number of columns has changed.
 			// returns: boolean
 			
-			if (this._lists.length !== this.cols){
-				if(this.cols > this._lists.length){
+			if (this._columnNodes.length !== this.cols){
+				if(this.cols > this._columnNodes.length){
 					this._addColumns();
 					return true;
-				}else if(this.cols < this._lists.length){
+				}else if(this.cols < this._columnNodes.length){
 					this._removeColumns();
 					return true;
 				}
@@ -266,19 +266,19 @@ define([
 			return false;
 		},
 		
-		_createNewColumn: function(listMixin){
+		_createNewColumn: function(columnMixin){
 			// summary:
 			//		Create a new column within the container node.
-			// listMixin: object
+			// columnMixin: object
 			//		The object to use for construction of the
 			//		column-tag attributes.  Defaults to an empty object.
 			// returns: object XMLNode
 			//		The new column element
 			
-			listMixin = ((listMixin === undefined) ? {} : listMixin);
+			columnMixin = ((columnMixin === undefined) ? {} : columnMixin);
 			
 			return domConstr.create(
-				this.listTag, listMixin, this.containerNode
+				this.columnTagName, columnMixin, this.containerNode
 			);
 		},
 		
@@ -291,7 +291,7 @@ define([
 			var width = parseInt((100/this.cols), 10) - this.gap;
 			width = width.toString() + "%";
 			
-			var listMixin = {
+			var columnMixin = {
 				"style": {
 					"float": "left",
 					"width": width
@@ -299,20 +299,20 @@ define([
 			};
 			
 			if(this["class"] != ""){
-				listMixin["class"] = this["class"];
+				columnMixin["class"] = this["class"];
 			}
 			
-			return listMixin;
+			return columnMixin;
 		},
 		
 		_addColumns: function(){
 			// summary:
 			//		Add a new column, if one is needed.
 			
-			var colsToAdd = (this.cols-this._lists.length);
+			var colsToAdd = (this.cols-this._columnNodes.length);
 			if(colsToAdd > 0){
 				for(var i = 1; i <= colsToAdd; i++){
-					this._lists.push(this._createNewColumn());
+					this._columnNodes.push(this._createNewColumn());
 				}
 				this._recalcColStyle();
 			}
@@ -323,15 +323,15 @@ define([
 			// summary:
 			//		Remove a column, if one needs removing.
 			
-			var colsToRemove = (this._lists.length-this.cols);
+			var colsToRemove = (this._columnNodes.length-this.cols);
 			if(colsToRemove > 0){
 				for(var i = 1; i <= colsToRemove; i++){
-					var cList = this._lists.pop();
-					var items = this._getNewItems(cList);
+					var cCol = this._columnNodes.pop();
+					var items = this._getNewItems(cCol);
 					for(var ii = (items.length - 1); ii >= 0; ii--){
 						domConstr.place(items[ii], this._holdingArea, "first");
 					}
-					domConstr.destroy(cList);
+					domConstr.destroy(cCol);
 				}
 				this._recalcColStyle();
 			}
@@ -342,8 +342,8 @@ define([
 			//		Re-apply the correct style to each column.
 			
 			var mixin = this._createColumnMixin();
-			array.forEach(this._lists, function(list){
-				domStyle.set(list, mixin.style);
+			array.forEach(this._columnNodes, function(colNode){
+				domStyle.set(colNode, mixin.style);
 			}, this);
 		},
 		
@@ -357,7 +357,7 @@ define([
 			parentNode = ((parentNode === undefined) ? this.domNode : parentNode);
 			
 			var newItems = new Array();
-			var items = $(this.listItemTag, parentNode);
+			var items = $(this.itemTagName, parentNode);
 			array.forEach(items, function(item){
 				if(item.parentNode === parentNode){
 					newItems.push(item);
@@ -374,9 +374,9 @@ define([
 			// returns: array() XMLNode()
 			
 			var currentItems = new Array();
-			array.forEach(this._lists, function(list){
+			array.forEach(this._columnNodes, function(colNode){
 				currentItems = currentItems.concat(
-					this._getNewItems(list)
+					this._getNewItems(colNode)
 				)
 			}, this);
 			
@@ -391,7 +391,7 @@ define([
 			// items: array XMLNode()
 			//		Nodes (items) to move to the screen columns.
 			
-			if(this._lists.length > 0){
+			if(this._columnNodes.length > 0){
 				this._moveItemsToHoldingArea(items);
 				items = this._getNewAndCurrentItems();
 				this._rewrapColumns(items);
@@ -420,7 +420,7 @@ define([
 			var cColItem = 1;
 			
 			array.forEach(items, function(item, n){
-				domConstr.place(item, this._lists[cCol-1], "last");
+				domConstr.place(item, this._columnNodes[cCol-1], "last");
 				cColItem++;
 				if(cColItem > colSizes[cCol-1]){
 					cCol++;
@@ -441,7 +441,7 @@ define([
 			var itemsPerColumn = parseInt((items.length / this.cols), 10);
 			var itemsPerRem = (items.length % this.cols);
 			
-			for(var colNo = 0; colNo < this._lists.length; colNo++){
+			for(var colNo = 0; colNo < this._columnNodes.length; colNo++){
 				sizes[colNo] = itemsPerColumn;
 				if(colNo < itemsPerRem){
 					sizes[colNo]++;
