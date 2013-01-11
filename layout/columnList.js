@@ -14,6 +14,7 @@
 define([
 	"dojo/_base/declare",
 	"./_columnListMixin",
+	"./_columnListDomMixin",
 	"dojo/_base/lang",
 	"dojo/_base/array",
 	"dojo/dom-attr",
@@ -22,12 +23,12 @@ define([
 	"dojo/dom-class",
 	"dojo/query"
 ], function(
-	declare, _columnListMixin, lang, array,
+	declare, _columnListMixin, _columnListDomMixin, lang, array,
 	domAttr, domConstr, domStyle, domClass, $, on
 ){
 	"use strict";
 	
-	var construct = declare([_columnListMixin], {
+	var construct = declare([_columnListMixin, _columnListDomMixin], {
 		// cols: integer
 		//		Number of columns to display.
 		"cols": 2,
@@ -64,23 +65,6 @@ define([
 		// _items: array()
 		//		Items currently showing om the screen.
 		"_items": [],
-		
-		// _holdingArea: object XMLNode
-		//		Node used to hold new items before applying to the screen.
-		"_holdingArea": null,
-		
-		// containerNode: object XMLNode
-		//		The container node for onscreen columns.
-		"containerNode": null,
-		
-		// widgetNode: object XMLNode
-		//		Node to contain the main widget, seperate from this.domNode
-		"widgetNode": null,
-		
-		// _hiddenNode: object XMLNode
-		//		Node used to hide content from the screen.  Nodes can be moved
-		//		in/out of this node to show/hide
-		"_hiddenNode": null,
 		
 		// _parentNode: object XMLNode
 		//		The current parent of domNode, used to move columns when
@@ -134,6 +118,7 @@ define([
 			
 			this._hideNode(this.domNode);
 			this._initWidgetNode();
+			this._initColumns();
 		},
 		
 		_initClass: function(){
@@ -152,97 +137,6 @@ define([
 			
 			if(this.columnTagName === null){
 				this.columnTagName = this.domNode.tagName.toLowerCase();
-			}
-		},
-		
-		_initWidgetNode: function(){
-			// summary:
-			//		Create a widgetNode and the contents of that node.
-			// description:
-			//		Create a widgetNode and the contents of that node.  This is
-			//		different to the domNode.  The domNode is hidden and changes
-			//		tracked and moved to the on-screen widget node.  This is so
-			//		lists can be added to, and removed from, via standard Dom
-			//		manipulation methods.
-			
-			if(!this._isElement(this.widgetNode)){
-				this.widgetNode = domConstr.create(
-					"div", {}, this.domNode, "after"
-				);
-			}
-			this._initHiddenNode();
-			this._initHoldingArea();
-			this._initContainer();
-			this._initClearNode();
-			this._initColumns();
-		},
-		
-		_initHiddenNode: function(){
-			// summary:
-			//		Create a hidden node so that other nodes can be moved in/out
-			//		of it to show/hide them.
-			
-			if(!this._isElement(this._hiddenNode)){
-				this._hiddenNode = domConstr.create(
-					"div", {}, this.widgetNode
-				);
-				this._hideNode(this._hiddenNode);
-			}
-		},
-		
-		_initHoldingArea: function(){
-			// summary:
-			//		Create a holding area for column-items before they are
-			//		applied to the screen.
-			// description:
-			//		Create a holding area for column-items before they are
-			//		applied to the screen.  This area is used to ensure the
-			//		widget is as thread-safe as possible and to hold
-			//		column-items when columns are removed and items need
-			//		re-applying to the screen.
-			// returns: object XMLNode
-			//		The new holding-area element.
-			
-			if(!this._isElement(this._holdingArea)){
-				var columnMixin = this._createColumnMixin();
-				this._holdingArea = domConstr.create(
-					this.columnTagName, columnMixin, this.widgetNode
-				);
-				this._hideNode(this._holdingArea, this._hiddenNode);
-			}
-			
-			return this._holdingArea
-		},
-		
-		_initContainer: function(){
-			// summary:
-			//		Create the main container for the columns.
-			// returns: object XMLNode
-			//		The new container element.
-			
-			if(!this._isElement(this.containerNode)){
-				this.containerNode = domConstr.create(
-					"div", {
-						"class": "simpoLayoutColumnList"
-					}, this.widgetNode
-				);
-			}
-			
-			return this.containerNode;
-		},
-		
-		_initClearNode: function(){
-			if(!this._isElement(this._clearNode)){
-				this._clearNode = domConstr.create(
-					"div", {
-						"style": {
-							"width": "1px",
-							"height": "1px",
-							"display": "block",
-							"clear": "both"
-						}
-					}, this.containerNode, "after"
-				);
 			}
 		},
 		
