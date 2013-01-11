@@ -87,7 +87,16 @@ define([
 		//		domNode moves.
 		"_parentNode": null,
 		
+		// _itemCount: integer
+		//		Keeps a count of the current on-screen items so removal and
+		//		additions can be detected
 		"_itemCount": 0,
+		
+		// _clearNode: object XMLNode
+		//		Node added after the container node to stop items floating
+		//		after the columns.
+		"_clearNode": null,
+		
 		
 		constructor: function(params, srcNodeRef){
 			if(srcNodeRef === undefined){
@@ -126,6 +135,7 @@ define([
 			this._hideNode(this.domNode);
 			this._initHoldingArea();
 			this._initContainer();
+			this._initClearNode();
 			this._initColumns();
 		},
 		
@@ -187,6 +197,21 @@ define([
 			}
 			
 			return this.containerNode;
+		},
+		
+		_initClearNode: function(){
+			if(!this._isElement(this._clearNode)){
+				this._clearNode = domConstr.create(
+					"div", {
+						"style": {
+							"width": "1px",
+							"height": "1px",
+							"display": "block",
+							"clear": "both"
+						}
+					}, this.containerNode, "after"
+				);
+			}
 		},
 		
 		_initColumns: function(){
@@ -268,6 +293,7 @@ define([
 			if(this.domNode.parentNode !== this._parentNode){
 				this._parentNode = this.domNode.parentNode;
 				domConstr.place(this.containerNode, this.domNode, "after");
+				domConstr.place(this._clearNode, this.containerNode, "after");
 				domConstr.place(this._holdingArea, this.domNode, "after");
 				//this._redraw();
 			}
