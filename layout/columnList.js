@@ -77,6 +77,11 @@ define([
 		//		Node to contain the main widget, seperate from this.domNode
 		"widgetNode": null,
 		
+		// _hiddenNode: object XMLNode
+		//		Node used to hide content from the screen.  Nodes can be moved
+		//		in/out of this node to show/hide
+		"_hiddenNode": null,
+		
 		// _parentNode: object XMLNode
 		//		The current parent of domNode, used to move columns when
 		//		domNode moves.
@@ -91,7 +96,6 @@ define([
 		//		Node added after the container node to stop items floating
 		//		after the columns.
 		"_clearNode": null,
-		
 		
 		constructor: function(params, srcNodeRef){
 			if(srcNodeRef === undefined){
@@ -166,11 +170,24 @@ define([
 					"div", {}, this.domNode, "after"
 				);
 			}
-			
+			this._initHiddenNode();
 			this._initHoldingArea();
 			this._initContainer();
 			this._initClearNode();
 			this._initColumns();
+		},
+		
+		_initHiddenNode: function(){
+			// summary:
+			//		Create a hidden node so that other nodes can be moved in/out
+			//		of it to show/hide them.
+			
+			if(!this._isElement(this._hiddenNode)){
+				this._hiddenNode = domConstr.create(
+					"div", {}, this.widgetNode
+				);
+				this._hideNode(this._hiddenNode);
+			}
 		},
 		
 		_initHoldingArea: function(){
@@ -191,7 +208,7 @@ define([
 				this._holdingArea = domConstr.create(
 					this.columnTagName, columnMixin, this.widgetNode
 				);
-				this._hideNode(this._holdingArea);
+				this._hideNode(this._holdingArea, this._hiddenNode);
 			}
 			
 			return this._holdingArea

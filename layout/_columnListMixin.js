@@ -9,9 +9,10 @@ define([
 	"dojo/_base/lang",
 	"dojo/_base/array",
 	"dojo/on",
-	"dojo/dom-style"
+	"dojo/dom-style",
+	"dojo/dom-construct"
 ], function(
-	declare, _widget, lang, array, on, domStyle
+	declare, _widget, lang, array, on, domStyle, domConstr
 ){
 	"use strict";
 	
@@ -100,22 +101,32 @@ define([
 			});
 		},
 		
-		_hideNode: function(node){
+		_hideNode: function(node, hiddenNode){
 			// summary:
 			//		Hide the main domNode for this widget.
 			// node: object XMLNode | undefined
 			//		The node to hide, defaults to this.domNode.
+			// hiddenNode: object XMLNode
+			//		The special hidden node to move node into to hide it.  If
+			//		no hiddenNode is supplied then a style is applied to node
+			//		to hide it, rather than moving it to a hidden area.
 			
 			node = ((node === undefined) ? this.domNode : node);
-			domStyle.set(node, {
-				"visibility": "hidden",
-				"position": "absolute",
-				"left": "0px",
-				"top": "0px",
-				"height": "1px",
-				"width": "1px",
-				"overflow": "hidden"
-			});
+			
+			if(!this._isElement(hiddenNode)){
+				domStyle.set(node, {
+					"visibility": "hidden",
+					"position": "absolute",
+					"left": "0px",
+					"top": "0px",
+					"height": "1px",
+					"width": "1px",
+					"overflow": "hidden"
+				});
+			}else{
+				domConstr.place(node, hiddenNode);
+			}
+			
 		},
 		
 		_appandItem: function(list, item){
