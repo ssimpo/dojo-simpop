@@ -9,8 +9,7 @@
 //		Stephen Simpson <me@simpo.org>, <http://simpo.org>
 // todo:
 //		Distribution according to item screen space rather than item number.
-//		Dection of changing column numbers and automatic redrawing based on this.
-//		Dection of when items less than column number and therefore less columns need drawing.
+//		Detection of when items less than column number and therefore less columns need drawing.
 //		Better styling of gaps.
 define([
 	"dojo/_base/declare",
@@ -47,7 +46,7 @@ define([
 		//		given in declarative markup).
 		"class": "",
 		
-		// gap: interger
+		// gap: integer
 		//		Percentage gap to apply between columns.
 		"gap": 5,
 		
@@ -67,15 +66,15 @@ define([
 		//		Items currently showing om the screen.
 		"_items": [],
 		
-		// _holdingArea: object XMLDomNode
+		// _holdingArea: object XMLNode
 		//		Node used to hold new items before applying to the screen.
 		"_holdingArea": null,
 		
-		// containerNode: object XMLDomNode
+		// containerNode: object XMLNode
 		//		The container node for onscreen columns.
 		"containerNode": null,
 		
-		// _parentNode: object XMLDomNode
+		// _parentNode: object XMLNode
 		//		The current parent of domNode, used to move lists when
 		//		domNode moves.
 		"_parentNode": null,
@@ -93,6 +92,9 @@ define([
 		},
 		
 		_init: function(){
+			// summary:
+			//		Call all the initialization methods.
+			
 			this._parentNode = this.domNode.parentNode;
 			this._setClass();
 			this._setListTag();
@@ -129,6 +131,8 @@ define([
 			//		List to append to.
 			// item: string
 			//		Item to add to the list.
+			// returns: string
+			//		The string list, separated by spaces.
 			
 			var lookup = new Object;
 			var items = split(list, "").concat(split(item, ""));
@@ -184,6 +188,14 @@ define([
 		},
 		
 		_createCol: function(listMixin){
+			// summary:
+			//		Create a new column within the container node.
+			// listMixin: object
+			//		The object to use for construction of the
+			//		list-tag attributes.  Defaults to an empty object.
+			// returns: object XMLNode
+			//		The new list element
+			
 			listMixin = ((listMixin === undefined) ? {} : listMixin);
 			
 			return domConstr.create(
@@ -192,6 +204,16 @@ define([
 		},
 		
 		_setupHoldingArea: function(){
+			// summary:
+			//		Create a holding area for list-items before they are
+			//		applied to the screen.
+			// description:
+			//		Create a holding area for list-items before they are
+			//		applied to the screen.  This area is used to ensure the
+			//		widget is as thread-safe as possible and to hold list-items
+			//		when columns are removed and items need re-applying to
+			//		the screen.
+			
 			var listMixin = this._createListMixin();
 			this._holdingArea = domConstr.create(
 				this.listTag, listMixin, this.domNode, "after"
@@ -202,6 +224,8 @@ define([
 		_setupContainer: function(){
 			// summary:
 			//		Create the main container for the columns.
+			// returns: object XMLNode
+			//		The new container element.
 			
 			this.containerNode = domConstr.create(
 				"div", {
@@ -215,6 +239,8 @@ define([
 		_createListMixin: function(){
 			// summary:
 			//		Create the mixin for creating each list.
+			// returns: object
+			//		The object to use in list creation.
 			
 			var width = parseInt((100/this.cols), 10) - this.gap;
 			width = width.toString() + "%";
@@ -236,7 +262,7 @@ define([
 		_hideNode: function(node){
 			// summary:
 			//		Hide the main domNode for this widget.
-			// node: object XMLDomNode | undefined
+			// node: object XMLNode | undefined
 			//		The node to hide, defaults to this.domNode.
 			
 			node = ((node === undefined) ? this.domNode : node);
@@ -258,8 +284,8 @@ define([
 			// description:
 			//		Check for new items added to the domNode and
 			//		move them to the correct column.  Ran at intervals
-			//		so that elements can be dynamically added via Javascript
-			//		as well as declarative in the html.
+			//		so that elements can be dynamically added via JavaScript
+			//		as well as declarative in the HTML.
 			
 			this._clearInterval();
 			this._checkParentNode();
@@ -273,6 +299,14 @@ define([
 		},
 		
 		_checkParentNode: function(){
+			// summary:
+			//		Ensure that nodes associated with this widget stay together.
+			// description:
+			//		Ensure all the widget nodes stay together.  If someone moves
+			//		this.domNode then it the other nodes need to move with it.
+			// todo:
+			//		Will not work if the nodes position in parent node is moved.
+			
 			if(this.domNode.parentNode !== this._parentNode){
 				this._parentNode = this.domNode.parentNode;
 				domConstr.place(this.containerNode, this.domNode, "after");
@@ -289,6 +323,10 @@ define([
 		},*/
 		
 		_checkColumnCount: function(){
+			// summary:
+			//		Check if the number of columns has changed.
+			// returns: boolean
+			
 			if (this._lists.length !== this.cols){
 				if(this.cols > this._lists.length){
 					this._addColumns();
@@ -304,6 +342,9 @@ define([
 		},
 		
 		_addColumns: function(){
+			// summary:
+			//		Add a new column, if one is needed.
+			
 			var colsToAdd = (this.cols-this._lists.length);
 			if(colsToAdd > 0){
 				for(var i = 1; i <= colsToAdd; i++){
@@ -315,6 +356,9 @@ define([
 		},
 		
 		_removeColumns: function(){
+			// summary:
+			//		Remove a column, if one needs removing.
+			
 			var colsToRemove = (this._lists.length-this.cols);
 			if(colsToRemove > 0){
 				for(var i = 1; i <= colsToRemove; i++){
@@ -330,6 +374,9 @@ define([
 		},
 		
 		_reCalcColStyle: function(){
+			// summary:
+			//		Re-apply the correct style to each column.
+			
 			var mixin = this._createListMixin();
 			array.forEach(this._lists, function(list){
 				domStyle.set(list, mixin.style);
@@ -337,6 +384,12 @@ define([
 		},
 		
 		_getNewItems: function(parentNode){
+			// summary:
+			//		Get all the new items that need adding.
+			// pasrentNode: object XMLNode
+			//		The node to check for new items (default to this.domNode).
+			// returns: array() XMLNode()
+			
 			parentNode = ((parentNode === undefined) ? this.domNode : parentNode);
 			
 			var newItems = new Array();
@@ -351,6 +404,11 @@ define([
 		},
 		
 		_getNewAndCurrentItems: function(){
+			// summary:
+			//		Get an array of all the new items to add and current
+			//		on-screen items.
+			// returns: array() XMLNode()
+			
 			var currentItems = new Array();
 			array.forEach(this._lists, function(list){
 				currentItems = currentItems.concat(
@@ -366,7 +424,7 @@ define([
 		_moveNewItems: function(items){
 			// summary:
 			//		Move new items added to the domNode to the correct column.
-			// items: array XMLDomNode()
+			// items: array XMLNode()
 			//		Nodes (items) to move to the screen columns.
 			
 			if(this._lists.length > 0){
@@ -377,6 +435,11 @@ define([
 		},
 		
 		_moveItemsToHoldingArea: function(items){
+			// summary:
+			//		Move supplied items to the holding area ready to be
+			//		displayed on-screen.
+			// items: array() XMLNode()
+			
 			array.forEach(items, function(item){
 				domConstr.place(item, this._holdingArea, "last");
 			}, this);
@@ -385,7 +448,7 @@ define([
 		_reWrapColumns: function(items){
 			// summary:
 			//		Apply list items to the correct column.
-			// items: array XMLDomNode()
+			// items: array XMLNode()
 			//		Nodes (items) to assign to the columns.
 			
 			var colSizes = this._calcColumnSize(items);
@@ -405,8 +468,10 @@ define([
 		_calcColumnSize: function(items){
 			// summary:
 			//		Calculate the number of items to apply to each column.
-			// items: array XMLDomNode()
-			//		Current items being assigned to on-screen columns
+			// items: array XMLNode()
+			//		Current items being assigned to on-screen columns.
+			// returns: array()
+			//		The sizes of each column.
 			
 			var sizes = new Array();
 			var itemsPerColumn = parseInt((items.length / this.cols), 10);
@@ -425,6 +490,11 @@ define([
 		_hasProperty: function(obj, propName){
 			// summary:
 			//		Check if an object has a particular property.
+			// obj: object
+			//		The object to test the properties of.
+			// propName: string
+			//		The property to test for.
+			// returns: boolean
 			
 			if(this._isObject(obj)){
 				return Object.prototype.hasOwnProperty.call(obj, propName);
@@ -434,6 +504,12 @@ define([
 		},
 		
 		_isObject: function(value){
+			// summary:
+			//		Test whether the supplied value is an object.
+			// value: mixed
+			//		The value to test.
+			// returns: boolean
+			
 			return ((Object.prototype.toString.call(value) === '[object Object]') || (typeof value === "object"));
 		},
 	});
