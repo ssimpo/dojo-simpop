@@ -10,9 +10,10 @@ define([
 	"dojo/_base/array",
 	"dojo/on",
 	"dojo/dom-style",
-	"dojo/dom-construct"
+	"dojo/dom-construct",
+	"dijit/registry"
 ], function(
-	declare, _widget, lang, array, on, domStyle, domConstr
+	declare, _widget, lang, array, on, domStyle, domConstr, registry
 ){
 	"use strict";
 	
@@ -199,6 +200,23 @@ define([
 					(value instanceof HTMLElement) :
 					(value && typeof value === "object" && value.nodeType === 1 && typeof value.nodeName === "string")
 			);
+		},
+		
+		_isWidget: function(obj){
+			try{
+				if((typeof obj === "object") && (obj !== undefined) && (obj !== null)){
+					if(this._isProperty(obj, "domNode")){
+						try{
+							var widget = registry.byNode(obj.domNode);
+							return (widget !== undefined);
+						}catch(e){}
+					}
+				}
+			}catch(e){
+				console.info("Failed to perform isWidget test");
+			}
+			
+			return false;
 		}
 	});
 	
