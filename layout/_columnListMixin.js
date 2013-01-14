@@ -39,10 +39,14 @@ define([
 			
 			func = ((func === undefined) ? this._intervalDefaultFunction : func);
 			
-			if(func !== null){
-				this._intervalFunc = setInterval(
-					lang.hitch(this, func), this._interval
-				)
+			try{
+				if(func !== null){
+					this._intervalFunc = setInterval(
+						lang.hitch(this, func), this._interval
+					)
+				}
+			}catch(e){
+				console.info("Could not setup a new interval.");
 			}
 		},
 		
@@ -50,11 +54,14 @@ define([
 			// summary:
 			//		Clear the current interval.
 			
-			if(this._intervalFunc !== null){
-				clearInterval(this._intervalFunc);
-				this._intervalFunc = null;
+			try{
+				if(this._intervalFunc !== null){
+					clearInterval(this._intervalFunc);
+					this._intervalFunc = null;
+				}
+			}catch(e){
+				console.info("Could not clear the current interval.");
 			}
-			
 		},
 		
 		_emitItemsAdded: function(count){
@@ -64,11 +71,15 @@ define([
 			// count: integer
 			//		Number added.
 			
-			on.emit(this, "itemsAdded", {
-				"bubbles": true,
-				"cancelable": false,
-				"numberAdded": count
-			});
+			try{
+				on.emit(this, "itemsAdded", {
+					"bubbles": true,
+					"cancelable": false,
+					"numberAdded": count
+				});
+			}catch(e){
+				console.info("Could not emit \"itemsAdded\" event.");
+			}
 		},
 		
 		_emitItemsRemoved: function(count){
@@ -78,11 +89,15 @@ define([
 			// count: integer
 			//		Number removed
 			
-			on.emit(this, "itemsAdded", {
-				"bubbles": true,
-				"cancelable": false,
-				"numberRemoved": count
-			});
+			try{
+				on.emit(this, "itemsAdded", {
+					"bubbles": true,
+					"cancelable": false,
+					"numberRemoved": count
+				});
+			}catch(e){
+				console.info("Could not emit \"itemsAdded\" event.");
+			}
 		},
 		
 		_emitColumnCountChange: function(from, to){
@@ -94,12 +109,16 @@ define([
 			// to: interger
 			//		The new number of columns
 			
-			on.emit(this, "columnCountChange", {
-				"bubbles": true,
-				"cancelable": false,
-				"previousCount": from,
-				"currentCount": to
-			});
+			try{
+				on.emit(this, "columnCountChange", {
+					"bubbles": true,
+					"cancelable": false,
+					"previousCount": from,
+					"currentCount": to
+				});
+			}catch(e){
+				console.info("Could not emit \"columnCountChange\" event.");
+			}
 		},
 		
 		_hideNode: function(node, hiddenNode){
@@ -115,17 +134,25 @@ define([
 			node = ((node === undefined) ? this.domNode : node);
 			
 			if(!this._isElement(hiddenNode)){
-				domStyle.set(node, {
-					"visibility": "hidden",
-					"position": "absolute",
-					"left": "0px",
-					"top": "0px",
-					"height": "1px",
-					"width": "1px",
-					"overflow": "hidden"
-				});
+				try{
+					domStyle.set(node, {
+						"visibility": "hidden",
+						"position": "absolute",
+						"left": "0px",
+						"top": "0px",
+						"height": "1px",
+						"width": "1px",
+						"overflow": "hidden"
+					});
+				}catch(e){
+					console.info("Could not make node hidden.");
+				}
 			}else{
-				domConstr.place(node, hiddenNode);
+				try{
+					domConstr.place(node, hiddenNode);
+				}catch(e){
+					console.info("Could not move node to hidden node.");
+				}
 			}
 			
 		},
@@ -144,22 +171,30 @@ define([
 			// returns: string
 			//		The string list, separated by spaces.
 			
-			var lookup = new Object;
-			var items = split(list, "").concat(split(item, ""));
-			var newList = "";
 			
-			array.forEach(items, function(item){
-				if(!this._isProperty(lookup, item)){
-					if(newList != ""){
-						newlist += " " + item;
-					}else{
-						newlist += item;
+			try{
+				var lookup = new Object;
+				var items = list.split(" ").concat(item.split(" "));
+				var newList = "";
+			
+				array.forEach(items, function(item){
+					if(!this._isProperty(lookup, item)){
+						if(newList != ""){
+							newList += " " + item;
+						}else{
+							newList += item;
+						}
+						lookup[item] = true;
 					}
-					lookup[item] = true;
-				}
-			});
+				}, this);
+				
+				return newList;
+			}catch(e){
+				console.info("Could not append \""+item+"\", to list: \""+list+"\".", e);
+				return list
+			}
 			
-			return newList;
+			
 		},
 		
 		_isProperty: function(obj, propName){
@@ -171,8 +206,12 @@ define([
 			//		The property to test for.
 			// returns: boolean
 			
-			if(this._isObject(obj)){
-				return Object.prototype.hasOwnProperty.call(obj, propName);
+			try{
+				if(this._isObject(obj)){
+					return Object.prototype.hasOwnProperty.call(obj, propName);
+				}
+			}catch(e){
+				console.info("Failed to perform isProperty test on property: " + propName + ".");
 			}
 			
 			return false;
@@ -185,7 +224,12 @@ define([
 			//		The value to test.
 			// returns: boolean
 			
-			return ((Object.prototype.toString.call(value) === '[object Object]') || (typeof value === "object"));
+			try{
+				return ((Object.prototype.toString.call(value) === '[object Object]') || (typeof value === "object"));
+			}catch(e){
+				console.info("Failed to perform isObject test.");
+				return false;
+			}
 		},
 		
 		_isElement: function(value){
@@ -195,11 +239,16 @@ define([
 			//		The value to test.
 			// returns: boolean
 			
-			return (
-				(typeof HTMLElement === "object") ?
-					(value instanceof HTMLElement) :
-					(value && typeof value === "object" && value.nodeType === 1 && typeof value.nodeName === "string")
-			);
+			try{
+				return (
+					(typeof HTMLElement === "object") ?
+						(value instanceof HTMLElement) :
+						(value && typeof value === "object" && value.nodeType === 1 && typeof value.nodeName === "string")
+				);
+			}catch(e){
+				console.info("Failed to perform isElement test.");
+				return false;
+			}
 		},
 		
 		_isWidget: function(obj){
@@ -213,7 +262,7 @@ define([
 					}
 				}
 			}catch(e){
-				console.info("Failed to perform isWidget test");
+				console.info("Failed to perform isWidget test.");
 			}
 			
 			return false;

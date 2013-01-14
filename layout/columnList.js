@@ -98,37 +98,54 @@ define([
 			// summary:
 			//		Call all the initialization methods.
 			
-			this._parentNode = this.domNode.parentNode;
-			this._initProperties();
-			this._initDom();
-			this._intervalDefaultFunction = this._domCheck;
-			this._setupInterval();
+			try{
+				this._parentNode = this.domNode.parentNode;
+				this._cols = this.cols;
+				this._initProperties();
+				this._initDom();
+				this._intervalDefaultFunction = this._domCheck;
+				this._setupInterval();
+			}catch(e){
+				console.info("Could not initiate the widget.");
+			}
 		},
 		
 		_initProperties: function(){
 			// summary:
 			//		Call all the widget property initialization methods.
 			
-			this._initClass();
-			this._initColumnTagName();
+			try{
+				this._initClass();
+				this._initColumnTagName();
+			}catch(e){
+				console.info("Could not initiate the widget properties.");
+			}
 		},
 		
 		_initDom: function(){
 			// summary:
 			//		Call all the widget DOM initialization methods.
 			
-			this._hideNode(this.domNode);
-			this._initWidgetNode();
-			this._initColumns();
+			try{
+				this._hideNode(this.domNode);
+				this._initWidgetNode();
+				this._initColumns();
+			}catch(e){
+				console.info("Could not initiate the widget Dom.");
+			}
 		},
 		
 		_initClass: function(){
 			// summary:
 			//		Set the class to apply to each column tag.
 			
-			var cClass = domAttr.get(this.domNode, "class");
-			if((cClass !== null) && (cClass !== "")){
-				this["class"] = this._appandItem(this["class"], cClass);
+			try{
+				var cClass = domAttr.get(this.domNode, "class");
+				if(cClass !== null){
+					this["class"] = this._appandItem(this["class"], cClass);
+				}
+			}catch(e){
+				console.info("Could not initiate class name for columns.");
 			}
 		},
 		
@@ -136,8 +153,12 @@ define([
 			// summary:
 			//		Set the type to use for columns.
 			
-			if(this.columnTagName === null){
-				this.columnTagName = this.domNode.tagName.toLowerCase();
+			try{
+				if(this.columnTagName === null){
+					this.columnTagName = this.domNode.tagName.toLowerCase();
+				}
+			}catch(e){
+				console.info("Could not initiate column tag name.");
 			}
 		},
 		
@@ -145,24 +166,31 @@ define([
 			// summary:
 			//		Create the columns.
 			
-			this._cols = this._calcColumnCount();
-			if(this.cols !== this._cols){
-				this._emitColumnCountChange(this.cols, this._cols);
-			}
+			try{
+				this._cols = this._calcColumnCount();
+				if(this.cols !== this._cols){
+					this._emitColumnCountChange(this.cols, this._cols);
+				}
 			
-			var columnMixin = this._createColumnMixin();
-			for(var i = 1; i <= this._cols; i++){
-				this._columnNodes.push(
-					this._createNewColumn(columnMixin)
-				);
+				var columnMixin = this._createColumnMixin();
+				for(var i = 1; i <= this._cols; i++){
+					this._columnNodes.push(
+						this._createNewColumn(columnMixin)
+					);
+				}
+			}catch(e){
+				console.info("Could not initiate columns.");
 			}
 		},
 		
 		clear: function(){
-			console.log("CLEAR");
-			$(this.itemTagName, this._holdingArea).remove();
-			$(this.itemTagName, this.containerNode).remove();
-			$(this.itemTagName, this.domNode).remove();
+			try{
+				$(this.itemTagName, this._holdingArea).remove();
+				$(this.itemTagName, this.containerNode).remove();
+				$(this.itemTagName, this.domNode).remove();
+			}catch(e){
+				console.info("Could not clear the widget of items.");
+			}
 		},
 		
 		_domCheck: function(){
@@ -176,23 +204,31 @@ define([
 			//		widget content.
 			
 			this._clearInterval();
-			this._checkParentNode();
-			this._checkItemsAddedOrRemoved();
-			var colCheck = this._checkColumnCount();
-			this._checkNewItems(colCheck);
-			this._checkItemsAddedOrRemoved();
+			try{
+				this._checkParentNode();
+				this._checkItemsAddedOrRemoved();
+				var colCheck = this._checkColumnCount();
+				this._checkNewItems(colCheck);
+				this._checkItemsAddedOrRemoved();
+			}catch(e){
+				console.info("Could not perform the dom checks.");
+			}
 			this._setupInterval();
 		},
 		
 		_checkItemsAddedOrRemoved: function(){
-			var items = this._getCurrentItems();
-			if(items.count !== this._itemCount){
-				if(items.count > this._itemCount){
-					this._emitItemsAdded(items.count - this._itemCount);
-				}else if(items.count < this._itemCount){
-					this._emitItemsRemoved(this._itemCount - items.count);
+			try{
+				var items = this._getCurrentItems();
+				if(items.count !== this._itemCount){
+					if(items.count > this._itemCount){
+						this._emitItemsAdded(items.count - this._itemCount);
+					}else if(items.count < this._itemCount){
+						this._emitItemsRemoved(this._itemCount - items.count);
+					}
+					this._itemCount = items.count;
 				}
-				this._itemCount = items.count;
+			}catch(e){
+				console.info("Could not perform check for added or removed items.");
 			}
 		},
 		
@@ -209,9 +245,13 @@ define([
 			//		mainly when columns are added or removed and items need
 			//		redistributing among the columns.
 			
-			var items = this._getNewItems();
-			if((items.length > 0) || force){
-				this._moveNewItems(items);
+			try{
+				var items = this._getNewItems();
+				if((items.length > 0) || force){
+					this._moveNewItems(items);
+				}
+			}catch(e){
+				console.info("Could not perform check for new items.");
 			}
 		},
 		
@@ -224,10 +264,14 @@ define([
 			// todo:
 			//		Will not work if the nodes position in parent node is moved.
 			
-			if(this.domNode.parentNode !== this._parentNode){
-				this._parentNode = this.domNode.parentNode;
-				domConstr.place(this.widgetNode, this.domNode, "after");
-				//this._redraw();
+			try{
+				if(this.domNode.parentNode !== this._parentNode){
+					this._parentNode = this.domNode.parentNode;
+					domConstr.place(this.widgetNode, this.domNode, "after");
+					//this._redraw();
+				}
+			}catch(e){
+				console.info("Could not perform parent node check.");
 			}
 		},
 		
@@ -244,20 +288,25 @@ define([
 			// returns: boolean
 			
 			var colCheck = false;
-			var currentColCount = this._columnNodes.length;
-			this._cols = this._calcColumnCount();
-			if (this._columnNodes.length !== this._cols){
-				if(this._cols > this._columnNodes.length){
-					this._addColumns();
-					colCheck = true;
-				}else if(this._cols < this._columnNodes.length){
-					this._removeColumns();
-					colCheck = true;
-				}
-			}
 			
-			if(colCheck){
-				this._emitColumnCountChange(currentColCount, this._cols);
+			try{
+				var currentColCount = this._columnNodes.length;
+				this._cols = this._calcColumnCount();
+				if (this._columnNodes.length !== this._cols){
+					if(this._cols > this._columnNodes.length){
+						this._addColumns();
+						colCheck = true;
+					}else if(this._cols < this._columnNodes.length){
+						this._removeColumns();
+						colCheck = true;
+					}
+				}
+			
+				if(colCheck){
+					this._emitColumnCountChange(currentColCount, this._cols);
+				}
+			}catch(e){
+				console.info("Could not perform column count check.");
 			}
 			
 			return colCheck;
@@ -272,11 +321,16 @@ define([
 			// returns: object XMLNode
 			//		The new column element
 			
-			columnMixin = ((columnMixin === undefined) ? {} : columnMixin);
+			try{
+				columnMixin = ((columnMixin === undefined) ? {} : columnMixin);
 			
-			return domConstr.create(
-				this.columnTagName, columnMixin, this.containerNode
-			);
+				return domConstr.create(
+					this.columnTagName, columnMixin, this.containerNode
+				);
+			}catch(e){
+				console.info("Could not create a new column.");
+				return null;
+			}
 		},
 		
 		_createColumnMixin: function(){
@@ -285,52 +339,65 @@ define([
 			// returns: object
 			//		The object to use in column creation.
 			
-			var width = parseInt((100/this._cols), 10) - this.gap;
-			width = width.toString() + "%";
+			try{
+				var width = parseInt((100/this._cols), 10) - this.gap;
+				width = width.toString() + "%";
 			
-			var columnMixin = {
-				"style": {
-					"float": "left",
-					"width": width
+				var columnMixin = {
+					"style": {
+						"float": "left",
+						"width": width
+					}
+				};
+			
+				if(this["class"] != ""){
+					columnMixin["class"] = this["class"];
 				}
-			};
 			
-			if(this["class"] != ""){
-				columnMixin["class"] = this["class"];
+				return columnMixin;
+			}catch(e){
+				console.info("Could not create the column element creation mixin object.");
+				return {};
 			}
-			
-			return columnMixin;
 		},
 		
 		_addColumns: function(){
 			// summary:
 			//		Add a new column, if one is needed.
 			
-			var colsToAdd = (this._cols-this._columnNodes.length);
-			if(colsToAdd > 0){
-				for(var i = 1; i <= colsToAdd; i++){
-					this._columnNodes.push(this._createNewColumn());
+			try{
+				var colsToAdd = (this._cols-this._columnNodes.length);
+				if(colsToAdd > 0){
+					var columnMixin = this._createColumnMixin();
+					for(var i = 1; i <= colsToAdd; i++){
+						this._columnNodes.push(this._createNewColumn(columnMixin));
+					}
+					this._recalcColStyle();
 				}
-				this._recalcColStyle();
+			}catch(e){
+				console.info("Could not add columns.");
 			}
-			
 		},
 		
 		_removeColumns: function(){
 			// summary:
 			//		Remove a column, if one needs removing.
 			
-			var colsToRemove = (this._columnNodes.length-this._cols);
-			if(colsToRemove > 0){
-				for(var i = 1; i <= colsToRemove; i++){
-					var cCol = this._columnNodes.pop();
-					var items = this._getNewItems(cCol);
-					for(var ii = (items.length - 1); ii >= 0; ii--){
-						domConstr.place(items[ii], this._holdingArea, "first");
+			try{
+				var colsToRemove = (this._columnNodes.length-this._cols);
+				if(colsToRemove > 0){
+					for(var i = 1; i <= colsToRemove; i++){
+						var cCol = this._columnNodes.pop();
+						var items = this._getNewItems(cCol);
+						for(var ii = (items.length - 1); ii >= 0; ii--){
+							domConstr.place(items[ii], this._holdingArea, "first");
+						}
+						domConstr.destroy(cCol);
 					}
-					domConstr.destroy(cCol);
+					this._recalcColStyle();
 				}
-				this._recalcColStyle();
+			}catch(e){
+				console.info("Could not remove columns.");
 			}
 		},
 		
@@ -338,10 +405,14 @@ define([
 			// summary:
 			//		Re-apply the correct style to each column.
 			
-			var mixin = this._createColumnMixin();
-			array.forEach(this._columnNodes, function(colNode){
-				domStyle.set(colNode, mixin.style);
-			}, this);
+			try{
+				var mixin = this._createColumnMixin();
+				array.forEach(this._columnNodes, function(colNode){
+					domStyle.set(colNode, mixin.style);
+				}, this);
+			}catch(e){
+				console.info("Could not recalculate and apply the column styles.");
+			}
 		},
 		
 		_getNewItems: function(parentNode){
@@ -351,17 +422,22 @@ define([
 			//		The node to check for new items (default to this.domNode).
 			// returns: array() XMLNode()
 			
-			parentNode = ((parentNode === undefined) ? this.domNode : parentNode);
+			try{
+				parentNode = ((parentNode === undefined) ? this.domNode : parentNode);
 			
-			var newItems = new Array();
-			var items = $(this.itemTagName, parentNode);
-			array.forEach(items, function(item){
-				if(item.parentNode === parentNode){
-					newItems.push(item);
-				}
-			}, this);
+				var newItems = new Array();
+				var items = $(this.itemTagName, parentNode);
+				array.forEach(items, function(item){
+					if(item.parentNode === parentNode){
+						newItems.push(item);
+					}
+				}, this);
 			
-			return newItems;
+				return newItems;
+			}catch(e){
+				console.info("Could not get new items");
+				return new Array();
+			}
 		},
 		
 		_getCurrentItems: function(){
@@ -369,14 +445,19 @@ define([
 			//		Get an array of all the current on-screen items.
 			// returns: array() XMLNode()
 			
-			var currentItems = new Array();
-			array.forEach(this._columnNodes, function(colNode){
-				currentItems = currentItems.concat(
-					this._getNewItems(colNode)
-				)
-			}, this);
+			try{
+				var currentItems = new Array();
+				array.forEach(this._columnNodes, function(colNode){
+					currentItems = currentItems.concat(
+						this._getNewItems(colNode)
+					)
+				}, this);
 			
-			return currentItems;
+				return currentItems;
+			}catch(e){
+				console.info("Could not get current items");
+				return new Array();
+			}
 		},
 		
 		_getNewAndCurrentItems: function(){
@@ -385,10 +466,15 @@ define([
 			//		on-screen items.
 			// returns: array() XMLNode()
 			
-			var currentItems = this._getCurrentItems();
-			return currentItems.concat(
-				this._getNewItems(this._holdingArea)
-			);
+			try{
+				var currentItems = this._getCurrentItems();
+				return currentItems.concat(
+					this._getNewItems(this._holdingArea)
+				);
+			}catch(e){
+				console.info("Could not get new and current items");
+				return new Array();
+			}
 		},
 		
 		_getAllCurrentItems: function(){
@@ -396,8 +482,13 @@ define([
 			//		Get all the on-screen and off-screen items.
 			// returns: array() XMLNode()
 			
-			var currentItems = this._getNewAndCurrentItems();
-			return currentItems.concat(this._getNewItems());
+			try{
+				var currentItems = this._getNewAndCurrentItems();
+				return currentItems.concat(this._getNewItems());
+			}catch(e){
+				console.info("Could not get all current items");
+				return new Array();
+			}
 		},
 		
 		_moveNewItems: function(items){
@@ -406,10 +497,14 @@ define([
 			// items: array XMLNode()
 			//		Nodes (items) to move to the screen columns.
 			
-			if(this._columnNodes.length > 0){
-				this._moveItemsToHoldingArea(items);
-				items = this._getNewAndCurrentItems();
-				this._rewrapColumns(items);
+			try{
+				if(this._columnNodes.length > 0){
+					this._moveItemsToHoldingArea(items);
+					items = this._getNewAndCurrentItems();
+					this._rewrapColumns(items);
+				}
+			}catch(e){
+				console.info("Could not move new items");
 			}
 		},
 		
@@ -419,9 +514,13 @@ define([
 			//		displayed on-screen.
 			// items: array() XMLNode()
 			
-			array.forEach(items, function(item){
-				domConstr.place(item, this._holdingArea, "last");
-			}, this);
+			try{
+				array.forEach(items, function(item){
+					domConstr.place(item, this._holdingArea, "last");
+				}, this);
+			}catch(e){
+				console.info("Could not move items to holding area");
+			}			
 		},
 		
 		_rewrapColumns: function(items){
@@ -430,18 +529,22 @@ define([
 			// items: array XMLNode()
 			//		Nodes (items) to assign to the columns.
 			
-			var colSizes = this._calcColumnSize(items);
-			var cCol = 1;
-			var cColItem = 1;
+			try{
+				var colSizes = this._calcColumnSize(items);
+				var cCol = 1;
+				var cColItem = 1;
 			
-			array.forEach(items, function(item, n){
-				domConstr.place(item, this._columnNodes[cCol-1], "last");
-				cColItem++;
-				if(cColItem > colSizes[cCol-1]){
-					cCol++;
-					cColItem = 1;
-				}
-			}, this);
+				array.forEach(items, function(item, n){
+					domConstr.place(item, this._columnNodes[cCol-1], "last");
+					cColItem++;
+					if(cColItem > colSizes[cCol-1]){
+						cCol++;
+						cColItem = 1;
+					}
+				}, this);
+			}catch(e){
+				console.info("Could not rewrap columns");
+			}
 		},
 		
 		_calcColumnCount: function(){
@@ -452,9 +555,14 @@ define([
 			//		less than this.cols if the number of items is less than the
 			//		number of columns.
 			
-			var items = this._getAllCurrentItems();
+			try{
+				var items = this._getAllCurrentItems();
 			
-			return ((this.cols > items.length) ? items.length : this.cols);
+				return ((this.cols > items.length) ? items.length : this.cols);
+			}catch(e){
+				console.info("Could not calculate column count");
+				return 0;
+			}
 		},
 		
 		_calcColumnSize: function(items){
@@ -466,14 +574,19 @@ define([
 			//		The sizes of each column.
 			
 			var sizes = new Array();
-			var itemsPerColumn = parseInt((items.length / this._cols), 10);
-			var itemsPerRem = (items.length % this._cols);
 			
-			for(var colNo = 0; colNo < this._columnNodes.length; colNo++){
-				sizes[colNo] = itemsPerColumn;
-				if(colNo < itemsPerRem){
-					sizes[colNo]++;
+			try{
+				var itemsPerColumn = parseInt((items.length / this._cols), 10);
+				var itemsPerRem = (items.length % this._cols);
+			
+				for(var colNo = 0; colNo < this._columnNodes.length; colNo++){
+					sizes[colNo] = itemsPerColumn;
+					if(colNo < itemsPerRem){
+						sizes[colNo]++;
+					}
 				}
+			}catch(e){
+				console.info("Could not calculate column sizes array");
 			}
 			
 			return sizes;

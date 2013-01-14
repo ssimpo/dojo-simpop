@@ -54,15 +54,19 @@ define([
 			//		lists can be added to, and removed from, via standard Dom
 			//		manipulation methods.
 			
-			if(!this._isElement(this.widgetNode)){
-				this.widgetNode = domConstr.create(
-					"div", {}, this.domNode, "after"
-				);
+			try{
+				if(!this._isElement(this.widgetNode)){
+					this.widgetNode = domConstr.create(
+						"div", {}, this.domNode, "after"
+					);
+				}
+				this._initHiddenNode();
+				this._initHoldingArea();
+				this._initContainer();
+				this._initClearNode();
+			}catch(e){
+				console.info("Could not initiate the widget node.");
 			}
-			this._initHiddenNode();
-			this._initHoldingArea();
-			this._initContainer();
-			this._initClearNode();
 		},
 		
 		_initHiddenNode: function(){
@@ -70,11 +74,15 @@ define([
 			//		Create a hidden node so that other nodes can be moved in/out
 			//		of it to show/hide them.
 			
-			if(!this._isElement(this._hiddenNode)){
-				this._hiddenNode = domConstr.create(
-					"div", {}, this.widgetNode
-				);
-				this._hideNode(this._hiddenNode);
+			try{
+				if(!this._isElement(this._hiddenNode)){
+					this._hiddenNode = domConstr.create(
+						"div", {}, this.widgetNode
+					);
+					this._hideNode(this._hiddenNode);
+				}
+			}catch(e){
+				console.info("Could not initiate the hidden node.");
 			}
 		},
 		
@@ -91,15 +99,19 @@ define([
 			// returns: object XMLNode
 			//		The new holding-area element.
 			
-			if(!this._isElement(this._holdingArea)){
-				var columnMixin = this._createColumnMixin();
-				this._holdingArea = domConstr.create(
-					this.columnTagName, columnMixin, this.widgetNode
-				);
-				this._hideNode(this._holdingArea, this._hiddenNode);
+			try{
+				if(!this._isElement(this._holdingArea)){
+					var columnMixin = this._createColumnMixin();
+					this._holdingArea = domConstr.create(
+						this.columnTagName, columnMixin, this.widgetNode
+					);
+					this._hideNode(this._holdingArea, this._hiddenNode);
+				}
+				return this._holdingArea;
+			}catch(e){
+				console.info("Could not initiate the holding-area node.");
+				return null;
 			}
-			
-			return this._holdingArea
 		},
 		
 		_initContainer: function(){
@@ -108,29 +120,38 @@ define([
 			// returns: object XMLNode
 			//		The new container element.
 			
-			if(!this._isElement(this.containerNode)){
-				this.containerNode = domConstr.create(
-					"div", {
-						"class": "simpoLayoutColumnList"
-					}, this.widgetNode
-				);
-			}
+			try{
+				if(!this._isElement(this.containerNode)){
+					this.containerNode = domConstr.create(
+						"div", {
+							"class": "simpoLayoutColumnList"
+						}, this.widgetNode
+					);
+				}
 			
-			return this.containerNode;
+				return this.containerNode;
+			}catch(e){
+				console.info("Could not initiate the container node.");
+				return null;
+			}
 		},
 		
 		_initClearNode: function(){
-			if(!this._isElement(this._clearNode)){
-				this._clearNode = domConstr.create(
-					"div", {
-						"style": {
-							"width": "1px",
-							"height": "1px",
-							"display": "block",
-							"clear": "both"
-						}
-					}, this.containerNode, "after"
-				);
+			try{
+				if(!this._isElement(this._clearNode)){
+					this._clearNode = domConstr.create(
+						"div", {
+							"style": {
+								"width": "1px",
+								"height": "1px",
+								"display": "block",
+								"clear": "both"
+							}
+						}, this.containerNode, "after"
+					);
+				}
+			}catch(e){
+				console.info("Could not initiate the clear node.");
 			}
 		}
 	});
