@@ -7,20 +7,105 @@
 define([
 	"dojo/_base/declare",
 	"simpo/interval",
-	"dojo/request",
+	"dojo/request/xhr",
 	"lib/md5",
-	"dojo/_base/lang"
+	"dojo/_base/lang",
+	"dojo/on",
+	"dojo/json",
+	"dojo/_base/array"
 ], function(
-	declare, interval, request, md5, lang
+	declare, interval, request, md5, lang, on, JSON, array
 ) {
 	"use strict";
 	
+	function workerTest(){
+		try {
+			var test = (!document && !window);
+			return test;
+		}catch(e){
+			return true;
+		}
+	}
+	
+	var global = Function('return this')() || (42, eval)('this');
+	var isWorker = workerTest();
 	var xhrAttemptsLookup = new Object();
 	var attempts = 3;
 	var timeout = 8*1000;
 	var queue = new Array();
+	var workerQueue = {};
 	var running = 0;
-	var limit = 2;
+	var limit = ((isWorker) ? 4 : 2);
+	var worker = null;
+	var ready = false;
+	
+	function workerOnMessage(message){
+		if(isProperty(message, "message")){
+			if(isProperty(message.message, "type")){
+				if(message.message.type == "xhrData"){
+					if(isProperty(message.message, "data")){
+						if(isProperty(workerQueue, message.message.hash)){
+							parseWorkerMessage(
+								message.message.data,
+								workerQueue[message.message.hash]
+							);
+						}else{
+							console.info("Worker returned data that could not be linked to a request");
+						}
+					}
+				}
+			}
+		}
+	}
+
+	function parseWorkerMessage(data, obj){
+		try{
+			var parsedData = JSON.parse(data);
+			xhrSuccess(parsedData, obj);
+		}catch(e){
+			console.log("Could not parse data returned for: " + obj.url);
+		}
+	}
+	
+	function initWorker(){
+		require([
+			"simpo/webworker",
+			"dojo/has"
+		], function(webworker, has){
+			if(has("webworker")){
+				worker = new webworker({
+					"src":"/scripts/simpo/xhrManager/worker"
+				});
+				on(worker, "message", workerOnMessage);
+				reCallQueue();
+				ready = true;
+			}else{
+				ready = true;
+			}
+		});
+	}
+	
+	function reCallQueue(){
+		var tempQueue = new Array();
+		array.forEach(queue, function(obj){
+			tempQueue.push(obj);
+		});
+		queue = new Array();
+		array.forEach(tempQueue, function(obj){
+			construct.add(obj);
+		});
+	}
+	
+	if(!isWorker){
+		initWorker();
+	}else{
+		ready = true;
+	}
+
+	function decCounter(){
+		running--;
+		running = ((running < 0) ? 0 : running);
+	}
 	
 	function xhrCall(obj){
 		try{
@@ -28,18 +113,15 @@ define([
 				running++;
 				request(
 					obj.url, {
-						"handleAs": obj.handleAs,
+						"handleAs": ((isWorker) ? "text" : obj.handleAs),
 						"preventCache": obj.preventCache,
 						"timeout": obj.timeout
 					}
 				).then(
 					function(data){
-						running--;
-						obj.success(data);
+						xhrSuccess(data, obj);
 					},
 					function(e){
-						running--;
-						running = ((running < 0) ? 0 : running);
 						xhrError(obj, e);
 					}
 				);
@@ -48,6 +130,19 @@ define([
 			}
 		}catch(e){
 			console.info(obj.errorMsg);
+		}
+	}
+	
+	function xhrSuccess(data, obj){
+		decCounter();
+		if(isWorker){
+			global.postMessage({
+				"type": "xhrData",
+				"hash": obj.hash,
+				"data": data
+			});
+		}else{
+			obj.success(data);
 		}
 	}
 	
@@ -73,7 +168,8 @@ define([
 				"errorMsg": "Failed to load: " + obj.url,
 				"handleAs": "json",
 				"timeout": timeout,
-				"preventCache": true
+				"preventCache": true,
+				"hash": md5(obj.url)
 			}, obj);
 			
 			if(isProperty(obj, "hitch")){
@@ -87,6 +183,19 @@ define([
 		return obj;
 	}
 	
+	function createPostMessage(obj){
+		var message = {
+			"type": "command",
+			"command": "getXhr",
+			"url": obj.url,
+			"timeout": obj.timeout,
+			"preventCache": obj.preventCache,
+			"hash": obj.hash
+		}
+		
+		return message;
+	}
+	
 	function xhrError(obj, e){
 		// summary:
 		//		Fallback when XHR request fails.
@@ -94,20 +203,21 @@ define([
 		//		Fallback for XHR on failure, will retry a few
 		//		times before a total fail.
 		
-		running--;
-		running = ((running < 0) ? 0 : running);
-		
-		var hash = md5(url);
-		if(!isProperty(xhrAttemptsLookup, hash)){
-			xhrAttemptsLookup[hash] = attempts;
+		decCounter();
+		if(!isProperty(xhrAttemptsLookup, obj.hash)){
+			xhrAttemptsLookup[obj.hash] = attempts;
 		}
 			
-		if(xhrAttemptsLookup[hash] > 0){
-			xhrAttemptsLookup[hash]--;
+		if(xhrAttemptsLookup[obj.hash] > 0){
+			xhrAttemptsLookup[obj.hash]--;
 			queue.push(obj);
 		}else{
 			if(isProperty(obj, "onError")){
-				obj.onError(e);
+				if(isWorker){
+					console.info(obj.errorMsg);
+				}else{
+					obj.onError(e);
+				}
 			}else{
 				console.info(obj.errorMsg);
 			}
@@ -115,8 +225,11 @@ define([
 	}
 	
 	function checkQueue(){
-		if((running < limit) && (queue.length > 0)){
+		if((running < limit) && (queue.length > 0) && (ready)){
 			var obj = queue.shift();
+			if(!isWorker){
+				console.log(ready, obj.url);
+			}
 			xhrCall(obj);
 		}
 	}
@@ -146,7 +259,14 @@ define([
 		
 		add: function(url, success, errorMsg){
 			var obj = intConstructor(arguments);
-			queue.push(obj);
+			
+			if((!isWorker) && (worker !== null)){
+				var message = createPostMessage(obj);
+				workerQueue[obj.hash] = obj;
+				worker.postMessage(message);
+			}else{
+				queue.push(obj);
+			}
 		}
 	};
 	
