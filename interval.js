@@ -1,7 +1,8 @@
 // summary:
-//
+//		Interval controller.
 // description:
-//
+//		Global interval controller, allowing code to be broken into chunks
+//		or code scheduled.
 // author:
 //		Stephen Simpson <me@simpo.org>, <http://simpo.org>
 define([
@@ -22,6 +23,9 @@ define([
 	var counterMax = 12;
 	
 	function initInterval(){
+		// summary:
+		//		Start running the intervals.
+		
 		try{
 			if(intervalFunction === null){
 				intervalFunction = setInterval(interval, _period);
@@ -32,6 +36,9 @@ define([
 	}
 	
 	function clearCurrentInterval(){
+		// summary:
+		//		Stop intervals.
+		
 		try{
 			if(_intervalFunction !== null){
 				clearInterval(intervalFunction);
@@ -43,6 +50,9 @@ define([
 	}
 	
 	function interval(){
+		// summary:
+		//		Interval controller. Only run if interval not already excuting.
+		
 		try{
 			if(!running){
 				running = true;
@@ -61,12 +71,27 @@ define([
 		}
 	}
 	
-	function runInterval(){
+	function incCounter(){
+		// summary:
+		//		Increment the counter and return to 1 if past the max value.
+		
 		counter++;
 		counter = (
 			(counter > counterMax) ? 1 : counter
 		);
-			
+	}
+	
+	function runInterval(){
+		// summary:
+		//		Run an interval.  Will run all the items in sequence in the
+		//		function list.  After running the list, run the next item in the
+		//		queue. Hence, list functions are run every interval according
+		//		to their specfied frequency but queue functions are ran one per
+		//		interval.
+		// description:
+		//		Run an interval.
+		
+		incCounter();
 		array.forEach(functionList, function(funcObj, n){
 			if((counter % funcObj.frequency) == 0){
 				funcObj.execute();
@@ -81,12 +106,30 @@ define([
 	
 	var construct = {
 		set: function(propName, value){
+			// summary:
+			//		Set a property.
+			
 			if(propName === "period"){
 				period = value;
 			}
 		},
 		
 		add: function(func, every, frequency){
+			// summary:
+			//		Add a new scheduled function.
+			// func: function
+			//		Function to add to the schedule.
+			// every: boolean (dafault = false)
+			//		If true, will be ran every interval (according to frequency
+			//		paramater).  Dafault to only run on the next available
+			//		interval slot; this means it will be be placed in a queue,
+			//		only one item from the queue is run each interval.
+			// frequency: interger (default = 1)
+			//		If every is set to true this sets the frequency of running
+			//		of the supplied function.  If set to 1, it will run every
+			//		interval; if set to 2 then it will run every second interval
+			//		...etc.
+			
 			every = ((every === undefined) ? false : every);
 			frequency = ((frequency === undefined) ? 1 : frequency);
 			
@@ -104,10 +147,17 @@ define([
 		},
 		
 		stop: function(){
+			// summary:
+			//		Stop all intervals running (will not empty the queue or
+			//		the function list).
+			
 			clearCurrentInterval();
 		},
 		
 		start: function(){
+			// summary:
+			//		Start running the intervals.
+			
 			initInterval();
 		}
 	};
