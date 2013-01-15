@@ -6,10 +6,9 @@
 //		Stephen Simpson <me@simpo.org>, <http://simpo.org>
 define([
 	"dojo/_base/declare",
-	"dojo/_base/lang",
 	"dojo/_base/array"
 ], function(
-	declare, lang, array
+	declare, array
 ) {
 	"use strict";
 	
@@ -17,7 +16,7 @@ define([
 	var period = 50;
 	var _period = 50;
 	var running = false;
-	var functionStack = new Array();
+	var functionQueue = new Array();
 	var functionList = new Array();
 	var counter = 0;
 	var counterMax = 12;
@@ -74,12 +73,19 @@ define([
 			}
 		}, this);
 			
-		if(functionStack.length > 0){
-			var func = functionStack.pop();
+		if(functionQueue.length > 0){
+			var func = functionQueue.shift();
+			func();
 		}
 	}
 	
 	var construct = {
+		set: function(propName, value){
+			if(propName === "period"){
+				period = value;
+			}
+		},
+		
 		add: function(func, every, frequency){
 			every = ((every === undefined) ? false : every);
 			frequency = ((frequency === undefined) ? 1 : frequency);
@@ -93,7 +99,7 @@ define([
 					counterMax = (frequency*2);
 				}
 			}else{
-				functionStack.push(func);
+				functionQueue.push(func);
 			}
 		},
 		
