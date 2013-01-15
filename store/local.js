@@ -5,6 +5,7 @@ define([
 	"dojo/_base/declare",
 	"dojo/store/Memory",
 	"dojo/aspect",
+	"simpo/interval",
 	"dojo/_base/lang",
 	"lib/lzw",
 	"lib/aes",
@@ -13,7 +14,7 @@ define([
 	"dojo/topic",
 	"dojo/sniff"
 ], function(
-	declare, store, aspect, lang, lzw, aes, md5, JSON, topic, sniff
+	declare, store, aspect, interval, lang, lzw, aes, md5, JSON, topic, sniff
 ){
 	"use strict";
 	
@@ -30,9 +31,7 @@ define([
 		"_orginalRemove": {},
 		
 		"_idCache": [],
-		"_initPopulateInterval": null,
-		"_trottle": 50,
-		"_slicer": 250,
+		"_slicer": 130,
 		
 		constructor: function(args){
 			this._init(args);
@@ -63,13 +62,8 @@ define([
 		},
 		
 		_initPopulation: function(){
-			if(!sniff("ie")){
-				this._trottle /= 3;
-			}
 			this._idCache = this._getIdArrayFromStorage();
-			this._initPopulateInterval = setInterval(
-				lang.hitch(this, this._populate), this._trottle
-			);
+			interval.add(lang.hitch(this, this._populate));
 		},
 		
 		_populate: function(){
@@ -81,8 +75,8 @@ define([
 				}
 				
 				this._populateStoreFromLocal(ids);
+				interval.add(lang.hitch(this, this._populate));
 			}else{
-				clearInterval(this._initPopulateInterval);
 				topic.publish("/simpo/store/local/databaseReady");
 			}
 		},
