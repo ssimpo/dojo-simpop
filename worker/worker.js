@@ -68,7 +68,7 @@ var dojoWorker = function(){
 		},
 		
 		_hasOwnProperty: function(obj, propName){
-			return Object.prototype.hasOwnProperty.call(obj, propName);
+			return ((Object.prototype.hasOwnProperty.call(obj, propName)) || (propName in obj));
 		}
 	};
 	
