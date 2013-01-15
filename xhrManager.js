@@ -8,9 +8,10 @@ define([
 	"dojo/_base/declare",
 	"simpo/interval",
 	"dojo/request",
-	"lib/md5"
+	"lib/md5",
+	"dojo/_base/lang"
 ], function(
-	declare, interval, request, md5
+	declare, interval, request, md5, lang
 ) {
 	"use strict";
 	
@@ -21,32 +22,72 @@ define([
 	var running = 0;
 	var limit = 2;
 	
-	function xhrCall(url, success, errorMsg){
+	function xhrCall(obj){
 		try{
-			running++;
-			request(
-				url, {
-					"handleAs": "json",
-					"preventCache": true,
-					"timeout": timeout
-				}
-			).then(
-				function(data){
-					running--;
-					success(data);
-				},
-				function(e){
-					running--;
-					running = ((running < 0) ? 0 : running);
-					xhrError(url, success, errMsg, e);
-				}
-			);
+			if(obj !== null){
+				running++;
+				request(
+					obj.url, {
+						"handleAs": obj.handleAs,
+						"preventCache": obj.preventCache,
+						"timeout": obj.timeout
+					}
+				).then(
+					function(data){
+						running--;
+						obj.success(data);
+					},
+					function(e){
+						running--;
+						running = ((running < 0) ? 0 : running);
+						xhrError(obj, e);
+					}
+				);
+			}else{
+				console.info("Could not load URL");
+			}
 		}catch(e){
-			console.info(errorMsg);
+			console.info(obj.errorMsg);
 		}
 	}
 	
-	function xhrError(url, success, errorMsg, e){
+	function intConstructor(args){
+		var obj = null;
+		
+		if(args.length === 1){
+			var obj = args[0];
+		}else{
+			if(args.length > 1){
+				var obj = {
+					"url": args[0],
+					"success": args[1]
+				};
+			}
+			if(args.length > 2){
+				obj.errorMsg = args[2];
+			}
+		}
+		
+		if(isObject(obj)){
+			obj = lang.mixin({
+				"errorMsg": "Failed to load: " + obj.url,
+				"handleAs": "json",
+				"timeout": timeout,
+				"preventCache": true
+			}, obj);
+			
+			if(isProperty(obj, "hitch")){
+				obj.success = lang.hitch(obj.hitch, obj.success);
+				if(isProperty(obj, "onError")){
+					obj.onError = lang.hitch(obj.hitch, obj.onError);
+				}
+			}
+		}
+		
+		return obj;
+	}
+	
+	function xhrError(obj, e){
 		// summary:
 		//		Fallback when XHR request fails.
 		// description:
@@ -57,23 +98,26 @@ define([
 		running = ((running < 0) ? 0 : running);
 		
 		var hash = md5(url);
-		if(!hasProperty(xhrAttemptsLookup, hash)){
+		if(!isProperty(xhrAttemptsLookup, hash)){
 			xhrAttemptsLookup[hash] = attempts;
 		}
 			
 		if(xhrAttemptsLookup[hash] > 0){
 			xhrAttemptsLookup[hash]--;
-			queue.push([url, success, errorMsg]);
+			queue.push(obj);
 		}else{
-			console.info("Failed to load: " + url);
-			console.info(errorMsg);
+			if(isProperty(obj, "onError")){
+				obj.onError(e);
+			}else{
+				console.info(obj.errorMsg);
+			}
 		}
 	}
 	
 	function checkQueue(){
 		if((running < limit) && (queue.length > 0)){
-			var data = queue.shift();
-			xhrCall(data[0], data[1], data[2]);
+			var obj = queue.shift();
+			xhrCall(obj);
 		}
 	}
 	
@@ -81,8 +125,8 @@ define([
 		return ((Object.prototype.toString.call(value) === '[object Object]') || (typeof value === "object"));
 	}
 	
-	function hasProperty(obj, propName){
-		if(this._isObject(obj)){
+	function isProperty(obj, propName){
+		if(isObject(obj)){
 			return ((Object.prototype.hasOwnProperty.call(obj, propName)) || (propName in obj));
 		}
 			
@@ -101,7 +145,8 @@ define([
 		},
 		
 		add: function(url, success, errorMsg){
-			queue.push([url, success, errorMsg]);
+			var obj = intConstructor(arguments);
+			queue.push(obj);
 		}
 	};
 	
