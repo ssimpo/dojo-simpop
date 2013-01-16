@@ -40,7 +40,7 @@ define([
 		//		Stop intervals.
 		
 		try{
-			if(_intervalFunction !== null){
+			if(intervalFunction !== null){
 				clearInterval(intervalFunction);
 				intervalFunction = null;
 			}
