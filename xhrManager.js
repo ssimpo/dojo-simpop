@@ -26,81 +26,20 @@ define([
 			return true;
 		}
 	}
-	
+
 	var global = Function('return this')() || (42, eval)('this');
 	var isWorker = workerTest();
 	var xhrAttemptsLookup = new Object();
 	var attempts = 3;
-	var timeout = 8*1000;
+	var timeout = ((workerTest()) ? 12*1000 : 8*1000);
 	var queue = new Array();
+	var dataQueue = new Array();
 	var workerQueue = {};
 	var running = 0;
 	var limit = ((isWorker) ? 4 : 2);
 	var worker = null;
 	var ready = false;
-	
-	function workerOnMessage(message){
-		if(isProperty(message, "message")){
-			if(isProperty(message.message, "type")){
-				if(message.message.type == "xhrData"){
-					if(isProperty(message.message, "data")){
-						if(isProperty(workerQueue, message.message.hash)){
-							parseWorkerMessage(
-								message.message.data,
-								workerQueue[message.message.hash]
-							);
-						}else{
-							console.info("Worker returned data that could not be linked to a request");
-						}
-					}
-				}
-			}
-		}
-	}
-
-	function parseWorkerMessage(data, obj){
-		try{
-			var parsedData = JSON.parse(data);
-			xhrSuccess(parsedData, obj);
-		}catch(e){
-			console.log("Could not parse data returned for: " + obj.url);
-		}
-	}
-	
-	function initWorker(){
-		require([
-			"simpo/webworker",
-			"dojo/has"
-		], function(webworker, has){
-			if(has("webworker")){
-				worker = new webworker({
-					"src":"/scripts/simpo/xhrManager/worker"
-				});
-				on(worker, "message", workerOnMessage);
-				reCallQueue();
-				ready = true;
-			}else{
-				ready = true;
-			}
-		});
-	}
-	
-	function reCallQueue(){
-		var tempQueue = new Array();
-		array.forEach(queue, function(obj){
-			tempQueue.push(obj);
-		});
-		queue = new Array();
-		array.forEach(tempQueue, function(obj){
-			construct.add(obj);
-		});
-	}
-	
-	if(!isWorker){
-		initWorker();
-	}else{
-		ready = true;
-	}
+	var breakout = false;
 
 	function decCounter(){
 		running--;
@@ -227,11 +166,73 @@ define([
 	function checkQueue(){
 		if((running < limit) && (queue.length > 0) && (ready)){
 			var obj = queue.shift();
-			if(!isWorker){
-				console.log(ready, obj.url);
-			}
 			xhrCall(obj);
 		}
+	}
+	
+	function initWorker(){
+		require([
+			"simpo/webworker",
+			"dojo/has"
+		], function(webworker, has){
+			if(has("webworker")){
+				worker = new webworker({
+					"src":"/scripts/simpo/xhrManager/worker"
+				});
+				on(worker, "message", workerOnMessage);
+				reCallQueue();
+				ready = true;
+				interval.add(checkDataQueue, true, 1);
+			}else{
+				ready = true;
+			}
+		});
+	}
+	
+	function workerOnMessage(message){
+		if(isProperty(message, "message")){
+			if(isProperty(message.message, "type")){
+				if(message.message.type == "xhrData"){
+					if(isProperty(message.message, "data")){
+						if(isProperty(workerQueue, message.message.hash)){
+							parseWorkerMessage(
+								message.message.data,
+								workerQueue[message.message.hash]
+							);
+						}else{
+							console.info("Worker returned data that could not be linked to a request");
+						}
+					}
+				}
+			}
+		}
+	}
+
+	function parseWorkerMessage(data, obj){
+		dataQueue.push({"data": data, "obj": obj})
+	}
+	
+	function checkDataQueue(){
+		try{
+			if(dataQueue.length > 0){
+				var obj = dataQueue.shift();
+				var parsedData = JSON.parse(obj.data);
+				xhrSuccess(parsedData, obj.obj);
+			}
+		}catch(e){
+			console.log("Could not parse data returned for: " + obj.url);
+		}
+	}
+	
+	function reCallQueue(){
+		var tempQueue = new Array();
+		array.forEach(queue, function(obj){
+			tempQueue.push(obj);
+		});
+		queue = new Array();
+		array.forEach(tempQueue, function(obj){
+			construct.add(obj);
+		});
 	}
 	
 	function isObject(value){
@@ -270,7 +271,17 @@ define([
 		}
 	};
 	
-	interval.add(checkQueue, true, 1);
+	function init(){
+		if(!isWorker){
+			initWorker();
+		}else{
+			interval.set("period", 500);
+			ready = true;
+		}
+		
+		interval.add(checkQueue, true, 1);
+	}
 	
+	init();
 	return construct;
 });
