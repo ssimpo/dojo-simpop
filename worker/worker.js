@@ -1,6 +1,18 @@
 var dojoWorker = function(){
 	var global = Function('return this')() || (42, eval)('this');
 	
+	function isObject(value){
+		return ((Object.prototype.toString.call(value) === '[object Object]') || (typeof value === "object"));
+	}
+	
+	function isProperty(obj, propName){
+		if(isObject(obj)){
+			return ((Object.prototype.hasOwnProperty.call(obj, propName)) || (propName in obj));
+		}
+			
+		return false;
+	}
+	
 	var staticObj = {
 		"relativePath": "",
 		"_includes": [
@@ -9,16 +21,16 @@ var dojoWorker = function(){
 		],
 		
 		_init: function(obj){
-			if(staticObj._isObject(obj)){
+			if(isObject(obj)){
 				global.dojoConfig = obj.dojoConfig;
 				
-				if(this._hasOwnProperty(obj, "relativePath")){
+				if(isProperty(obj, "relativePath")){
 					staticObj.relativePath = obj.relativePath;
 					staticObj._loadIncludes();
 					
 				}
 				
-				if(this._hasOwnProperty(obj, "src")){
+				if(isProperty(obj, "src")){
 					staticObj._importScript(obj.src);
 				}
 			}
@@ -61,25 +73,13 @@ var dojoWorker = function(){
 			}
 			
 			return query;
-		},
-		
-		_isObject: function(obj){
-			return (Object.prototype.toString.call(obj) === '[object Object]');
-		},
-		
-		_hasOwnProperty: function(obj, propName){
-			return ((Object.prototype.hasOwnProperty.call(obj, propName)) || (propName in obj));
 		}
 	};
 	
 	global.addEventListener('message', function(e){
-		function hasOwnProperty(obj, propName){
-			return Object.prototype.hasOwnProperty.call(obj, propName);
-		}
-		
 		var message = e.data;
-		if(staticObj._isObject(message)){
-			if(hasOwnProperty(message, "type") && hasOwnProperty(message, "message")){
+		if(isObject(message)){
+			if(isProperty(message, "type") && isProperty(message, "message")){
 				if(message.type == "init"){
 					staticObj._init(message.message);
 				}
@@ -89,26 +89,20 @@ var dojoWorker = function(){
 	
 	var orginalPostMessage = global.postMessage;
 	global.postMessage = function(obj){
-		function _isObject(obj){
-			return (Object.prototype.toString.call(obj) === '[object Object]');
-		}
-		function _formatMessage(obj){
+		function formatMessage(obj){
 			return {
 				"type": "message",
 				"message": obj
 			};
 		}
-		function hasOwnProperty(obj, propName){
-			return Object.prototype.hasOwnProperty.call(obj, propName);
-		}
 		
 		var formatted = true;
-		if(_isObject(obj)){
-			if(!hasOwnProperty(obj, "type") || !hasOwnProperty(obj, "message")){
-				obj = _formatMessage(obj);
+		if(isObject(obj)){
+			if(!isProperty(obj, "type") || !isProperty(obj, "message")){
+				obj = formatMessage(obj);
 			}
 		}else{
-			obj = _formatMessage(obj);
+			obj = formatMessage(obj);
 		}
 		
 		orginalPostMessage(obj);
