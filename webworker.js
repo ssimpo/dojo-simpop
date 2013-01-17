@@ -44,14 +44,19 @@ define([
 					var dojoWorkerUrl = require.toUrl("./worker/worker.js");
 					this.worker = new Worker(dojoWorkerUrl);
 					
-					on(this.worker, "message", lang.hitch(this, this._receiveMessage));
+					on(
+						this.worker,
+						"message",
+						lang.hitch(this, this._receiveMessage)
+					);
 					
 					this.postMessage({
 						"type": "init",
 						"message": {
 							"src": require.toUrl(this.src),
 							"relativePath": require.toUrl("./"),
-							"dojoConfig": dojoConfig
+							"dojoConfig": dojoConfig,
+							"transferableObjects": has("transferable-objects")
 						}
 					});
 				}
@@ -59,7 +64,13 @@ define([
 		},
 		
 		_receiveMessage: function(message){
+			console.log(1, message.data);
 			var messageObj = message.data;
+			if(this._isArrayBuffer(messageObj)){
+				messageObj = this._arrayBufferToString(messageObj);
+				messageObj = this._convertToObject(messageObj);
+			}
+			
 			if(!has("webworker-can-post-objects")){
 				messageObj = this._parseStringToObject(messageObj);
 			}
@@ -81,8 +92,16 @@ define([
 			}
 		},
 		
-		_isObject: function(obj){
-			return (Object.prototype.toString.call(obj) === '[object Object]');
+		_isObject: function(value){
+			return ((Object.prototype.toString.call(value) === '[object Object]') || (typeof value === "object"));
+		},
+		
+		_isString: function(value){
+			return (Object.prototype.toString.call(value) === '[object String]');
+		},
+		
+		_isArrayBuffer: function(value){
+			return (Object.prototype.toString.call(value) === '[object ArrayBuffer]');
 		},
 		
 		_handleConsole: function(messageObj){
@@ -141,21 +160,58 @@ define([
 			return message;
 		},
 		
-		//_messageCounter:0,
 		postMessage: function(message){
 			if(has("webworker")){
 				if(this.worker !== null){
-					//this._messageCounter++;
+					if(has("transferable-objects")){
+						console.log(2, message);
+						message = this._stringToArrayBuffer(message);
+						console.log(3, message);
+					}
 					this.worker.postMessage(message);
-					//console.log("MESSAGE COUNT", this._messageCounter, message.type);
 				}else{
 					console.error("Tried to post a message to a worker that has not been initialized.");
 				}
 			}
 		},
 		
+		_arrayBufferToString: function(buf){
+			return String.fromCharCode.apply(null, new Uint16Array(buf));
+		},
+		
+		_convertToObject: function(txt){
+			if(txt.length > 1){
+				var beginning = txt.charAt(0);
+				if((beginning == "[")||(beginning == "{")){
+					try{
+						var obj = JSON.parse(txt);
+						return obj;
+					}catch(e){}
+				}
+			}
+			
+			return txt;
+		},
+		
+		_stringToArrayBuffer: function(obj) {
+			if(!this._isString(obj)){
+				obj = JSON.stringify(obj);
+			}
+			
+			var buf = new ArrayBuffer(obj.length*2); // 2 bytes for each char
+			var bufView = new Uint16Array(buf);
+			for (var i=0, strLen=obj.length; i<strLen; i++) {
+				bufView[i] = obj.charCodeAt(i);
+			}
+			return buf;
+		},
+		
 		_hasOwnProperty: function(obj, propName){
-			return Object.prototype.hasOwnProperty.call(obj, propName);
+			if(this._isObject(obj)){
+				return ((Object.prototype.hasOwnProperty.call(obj, propName)) || (propName in obj));
+			}
+			
+			return false;
 		}
 		
 	});
@@ -170,6 +226,9 @@ define([
 				has.add("webworker", main.hasWorker);
 				if(has("webworker")){
 					this._hasCanPostObjectsSetup();
+					has.add("transferable-objects", main.hasTransferableObjects);
+				}else{
+					has.add("transferable-objects", false);
 				}
 				has.add("webworker-can-post-objects", main.hasWorker);
 				
@@ -183,6 +242,23 @@ define([
 		
 		hasCanPostObjects: function(global, document, anElement){
 			return main._hasCanPostObjects;
+		},
+		
+		hasTransferableObjects: function(global, document, anElement){
+			var dummyUrl = require.toUrl("./worker/dummy.js");
+			var worker = new Worker(dummyUrl);
+			
+			worker.postMessage = worker.webkitPostMessage || worker.postMessage;
+			var ab = new ArrayBuffer(1);
+			worker.postMessage(ab, [ab]);
+			if (ab.byteLength) {
+				worker.terminate();
+				return false;
+			}
+			
+			worker.terminate();
+			return true;
+
 		},
 		
 		_hasCanPostObjectsSetup: function(){
