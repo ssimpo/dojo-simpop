@@ -8,240 +8,293 @@ define([
 	"dojo/_base/declare",
 	"dojo/Evented",
 	"require",
-	"dojo/_base/lang",
+	"simpo/typeTest",
 	"dojo/has",
-	"dojo/json",
-	"dojo/_base/array",
-	"dojo/on"
+	"dojo/on",
+	"dojo/_base/lang",
+	"dojo/JSON"
 ], function(
-	declare, Evented, require, lang, has, JSON, array, on
+	declare, Evented, require, typeTest, has, on, lang, JSON
 ){
 	"use strict";
 	
 	var construct = declare([Evented], {
 		"src": null,
 		"worker": null,
+		"ready": false,
+		
+		"_messageQueue": [],
 		
 		constructor: function(){
-			if(arguments.length > 0){
-				for(var key in arguments[0]){
-					this[key] = arguments[0][key];
-				}
-			}
-			
-			this._init(arguments);
-		},
-		
-		_init: function(args){
-			if(has("webworker")){
-				this._loadWorker();
-			}
-		},
-		
-		_loadWorker: function(){
-			if(this.src !== null){
-				if(has("webworker")){
-					var dojoWorkerUrl = require.toUrl("./worker/worker.js");
-					this.worker = new Worker(dojoWorkerUrl);
-					
-					on(
-						this.worker,
-						"message",
-						lang.hitch(this, this._receiveMessage)
-					);
-					
-					this.postMessage({
-						"type": "init",
-						"message": {
-							"src": require.toUrl(this.src),
-							"relativePath": require.toUrl("./"),
-							"dojoConfig": dojoConfig,
-							"transferableObjects": has("transferable-objects")
-						}
-					});
-				}
-			}
-		},
-		
-		_receiveMessage: function(message){
-			console.log(1, message.data);
-			var messageObj = message.data;
-			if(this._isArrayBuffer(messageObj)){
-				messageObj = this._arrayBufferToString(messageObj);
-				messageObj = this._convertToObject(messageObj);
-			}
-			
-			if(!has("webworker-can-post-objects")){
-				messageObj = this._parseStringToObject(messageObj);
-			}
-			
-			if(!this._handleConsole(messageObj)){
-				if(this._isObject(messageObj)){
-					if(this._hasOwnProperty(messageObj, "type") && this._hasOwnProperty(messageObj, "message")){
-						if(messageObj.type == "message"){
-							on.emit(this, "message", {
-								"bubbles": false,
-								"cancelable": false,
-								"message": messageObj.message
-							});
-						}
+			try{
+				if(arguments.length > 0){
+					for(var key in arguments[0]){
+						this[key] = arguments[0][key];
 					}
 				}
-				
-				// Do something else? (if other message types needed)?
-			}
-		},
-		
-		_isObject: function(value){
-			return ((Object.prototype.toString.call(value) === '[object Object]') || (typeof value === "object"));
-		},
-		
-		_isString: function(value){
-			return (Object.prototype.toString.call(value) === '[object String]');
-		},
-		
-		_isArrayBuffer: function(value){
-			return (Object.prototype.toString.call(value) === '[object ArrayBuffer]');
-		},
-		
-		_handleConsole: function(messageObj){
-			if(
-				(Object.prototype.toString.call(messageObj) === '[object Object]')
-			){
-				if(
-					(this._hasOwnProperty(messageObj, "type"))
-					&&
-					(this._hasOwnProperty(messageObj, "message"))
-				){
-					if(messageObj.type == "log"){
-						this._callConsole("log", messageObj.message);
-						return true;
-					}
-					if(messageObj.type == "error"){
-						this._callConsole("error", messageObj.message);
-						return true;
-					}
-					if(messageObj.type == "warn"){
-						this._callConsole("warn", messageObj.message);
-						return true;
-					}
-					if(messageObj.type == "info"){
-						this._callConsole("info", messageObj.message);
-						return true;
-					}
-				}
+			}catch(e){
+				console.info("Could not mix properties into new class.");
 			}
 			
-			return false;
+			this._init();
 		},
 		
-		_callConsole: function(msgType, args){
-			if(args == undefined){
-				args = msgType;
-				msgType = "log";
+		_init: function(){
+			try{
+				createWorker(this);
+			}catch(e){
+				console.info("Could not create and intilalize new worker.");
 			}
-			if(Object.prototype.toString.call(args) !== '[object Array]'){
-				args = new Array(args);
-			}
-			
-			console[msgType].apply(console,args);
 		},
 		
-		_parseMessageToObject: function(text){
-			var message = text;
-			if(Object.prototype.toString.call(text) === '[object String]'){
-				try{
-					message = JSON.parse(text);
-				}catch(e){
-					message = text;
-				}
-			}
-			
-			return message;
-		},
-		
-		postMessage: function(message){
-			if(has("webworker")){
+		sendMessage: function(type, message){
+			try{
 				if(this.worker !== null){
-					if(has("transferable-objects")){
-						console.log(2, message);
-						message = this._stringToArrayBuffer(message);
-						console.log(3, message);
+					if((this.ready) || (type == "init")){
+						var sMessage = createMessage(type, message);
+						this.worker.postMessage(sMessage);
+					}else{
+						this._messageQueue.push([type, message]);
 					}
-					this.worker.postMessage(message);
-				}else{
-					console.error("Tried to post a message to a worker that has not been initialized.");
 				}
+			}catch(e){
+				console.info("Could not send message of type: "+type+", to the webworker");
 			}
-		},
-		
-		_arrayBufferToString: function(buf){
-			return String.fromCharCode.apply(null, new Uint16Array(buf));
-		},
-		
-		_convertToObject: function(txt){
-			if(txt.length > 1){
-				var beginning = txt.charAt(0);
-				if((beginning == "[")||(beginning == "{")){
-					try{
-						var obj = JSON.parse(txt);
-						return obj;
-					}catch(e){}
-				}
-			}
-			
-			return txt;
-		},
-		
-		_stringToArrayBuffer: function(obj) {
-			if(!this._isString(obj)){
-				obj = JSON.stringify(obj);
-			}
-			
-			var buf = new ArrayBuffer(obj.length*2); // 2 bytes for each char
-			var bufView = new Uint16Array(buf);
-			for (var i=0, strLen=obj.length; i<strLen; i++) {
-				bufView[i] = obj.charCodeAt(i);
-			}
-			return buf;
-		},
-		
-		_hasOwnProperty: function(obj, propName){
-			if(this._isObject(obj)){
-				return ((Object.prototype.hasOwnProperty.call(obj, propName)) || (propName in obj));
-			}
-			
-			return false;
 		}
-		
 	});
 	
-	var main = {
-		_called: false,
-		_hasCanPostObjectsCalled: false,
-		_hasCanPostObjects: false,
+	function createMessage(type, message){
+		var sMessage = null;
+		
+		try{
+			if(has("transferable-objects")){
+				sMessage = createTransferableObject(type, message);
+			}else{
+				sMessage = {
+					"type": type,
+					"message": message
+				};
+			}
+		}catch(e){
+			console.info("Could not create message object for postMessage.");
+		}
+			
+		return sMessage;
+	}
+	
+	function calcBufferLength(type, message){
+		try{
+			return ((message.length*2) + (type.length*2) + 2);
+		}catch(e){
+			console.info("Could not calculate buffer size.");
+			return 0;
+		}
+	}
+	
+	function createTransferableObject(type, message){
+		try{
+			if(!typeTest.isString(message)){
+				message = JSON.stringify(message);
+			}
+		
+			var bufferSize = calcBufferLength(type, message);
+			var buffer = new ArrayBuffer(bufferSize);
+			var view = new Uint16Array(buffer);
+		
+			for (var i = 0; i < type.length; i++){
+				view[i] = type.charCodeAt(i);
+			}
+			view[i] = 0;
+			for (var ii = 0; ii < message.length; ii++){
+				view[i+ii+1] = message.charCodeAt(ii);
+			}
+		
+			return buffer;
+		}catch(e){
+			console.info("Could not create transferrable object.");
+			return null;
+		}
+	}
+	
+	function createWorker(worker){
+		worker.worker = null;
+		
+		if(has("webworker")){
+			try{
+				var dojoWorkerUrl = require.toUrl("./worker/worker.js");
+				worker.worker = new Worker(dojoWorkerUrl);
+				
+				on(
+					worker.worker,
+					"message",
+					lang.hitch(this, receiveMessage, worker)
+				);
+				
+				worker.sendMessage("init", {
+					"src": require.toUrl(worker.src),
+					"relativePath": require.toUrl("./"),
+					"dojoConfig": dojoConfig,
+					"transferableObjects": has("transferable-objects")
+				});
+			}catch(e){
+				console.info("Could not create new WebWorker", e);
+			}
+		}
+	}
+	
+	function convertArrayBufferToObject(buffer){
+		try{
+			var view = new Uint16Array(buffer);
+			var type = "";
+			var i = 0;
+			var code = view[i++];
+			while((code !== 0) && (i < view.length) && (i < 100)){
+				type += String.fromCharCode(code);
+				code = view[i++];
+			}
+		
+			view = new Uint16Array(buffer, (type.length*2)+2);
+			var message = "";
+			for(var i = 0; i < view.length; i++){
+				message += String.fromCharCode(view[i]);
+			}
+			message = convertJson(message);
+		
+			return {
+				"type": type,
+				"message": message
+			};
+		}catch(e){
+			console.info("Could not convert array buffer to object.");
+			return null;
+		}
+	}
+	
+	function convertJson(txt){
+		try{
+			if(typeTest.isString(txt)){
+				var trimmed = lang.trim(txt);
+				if(trimmed.length > 1){
+					var firstChar = trimmed.substring(0, 1);
+					var lastChar = trimmed.substring(trimmed.length-1);
+					
+					if(
+					   ((firstChar == "{") && (lastChar == "}"))
+					   ||
+					   ((firstChar == "[") && (lastChar == "]"))
+					){
+						trimmed = JSON.parse(trimmed);
+						return trimmed;
+					}
+				}
+			}
+		}catch(e){
+			console.info("JSON conversion error.");
+		}
+		
+		return txt;
+	}
+	
+	function getMessageObject(data){
+		var message = null;
+		
+		try{
+			if(typeTest.isObject(data)){
+				if(typeTest.isProperty(data, "data")){
+					message = data.data;
+				
+					if(typeTest.isArrayBuffer(message)){
+						message = convertArrayBufferToObject(message);
+					}
+				}
+			}
+		}catch(e){
+			console.info("Could not get message object.");
+		}
+		
+		return message;
+	}
+	
+	function handleReadyMessage(worker){
+		try{
+			while(worker._messageQueue.length > 0){
+				worker.ready = true;
+				var qMessage = worker._messageQueue.shift();
+				worker.sendMessage(qMessage[0], qMessage[1]);
+			}
+		}catch(e){
+			console.info("Could not handle ready message.");
+		}
+	}
+	
+	function handleConsole(message){
+		try{
+			console[message.type].apply(console, message.message);
+		}catch(e){
+			console.info("Could not pass-on console message from the webworker.");
+		}
+	}
+	
+	function emitMessage(worker, message){
+		try{
+			on.emit(worker, message.type, {
+				"bubbles": false,
+				"cancelable": false,
+				"message": message.message,
+				"target": worker
+			});
+		}catch(e){
+			console.info("Could not emit message on worker.");
+		}
+	}
+	
+	function receiveMessage(worker, data){
+		try{
+			var message = getMessageObject(data);
+			if((message !== null) && (typeTest.isObject(message))){
+				if(
+					(typeTest.isProperty(message, "type"))
+					&&
+					(typeTest.isProperty(message, "message"))
+				){
+					if(message.type == "ready"){
+						handleReadyMessage(worker);
+					}else if(message.type == "console"){
+						handleConsole(message.message);
+					}else{
+						emitMessage(worker, message)
+					}
+				}
+			}
+		}catch(e){
+			console.info("Could not handle received message properly.");
+		}
+	}
+	
+	var hasTests = {
+		"_called": false,
 		
 		init: function(){
-			if(!main._called){
-				has.add("webworker", main.hasWorker);
+			if(!hasTests._called){
+				has.add("webworker", hasTests.hasWorker);
 				if(has("webworker")){
-					this._hasCanPostObjectsSetup();
-					has.add("transferable-objects", main.hasTransferableObjects);
+					has.add(
+						"transferable-objects",
+						hasTests.hasTransferableObjects
+					);
 				}else{
-					has.add("transferable-objects", false);
+					has.add(
+						"transferable-objects",
+						false
+					);
 				}
-				has.add("webworker-can-post-objects", main.hasWorker);
 				
-				main._called = true;
+				hasTests._called = true;
 			}
 		},
 		
 		hasWorker: function(global, document, anElement){
-			return (typeof global.Worker === "function");
-		},
-		
-		hasCanPostObjects: function(global, document, anElement){
-			return main._hasCanPostObjects;
+			return typeTest.isFunction(global.Worker);
 		},
 		
 		hasTransferableObjects: function(global, document, anElement){
@@ -258,44 +311,9 @@ define([
 			
 			worker.terminate();
 			return true;
-
-		},
-		
-		_hasCanPostObjectsSetup: function(){
-			if(!main._hasCanPostObjectsCalled){
-				var dummyUrl = require.toUrl("./worker/dummy.js");
-				var worker = new Worker(dummyUrl);
-				
-				on(worker, "message", function(event){
-					if(!main._hasCanPostObjectsCalled){
-						main._hasCanPostObjects = (event.data.value === 'dummy');
-						//main._hasCanPostObjectsCallback.call(
-							//null, (event.data.value === 'dummy')
-						//);
-					}
-					main._hasCanPostObjectsCalled = true;
-					worker.terminate();
-				});
-					
-				try{
-					worker.postMessage({'value': 'dummy'});
-				}catch(e){
-					if(!main._hasCanPostObjectsCalled){
-						main._hasCanPostObjects = false;
-						//main._hasCanPostObjectsCallback.call(null, false);
-					}
-					main._hasCanPostObjectsCalled = true;
-					worker.terminate();
-				}
-			}
 		}
-		/*,
-		_hasCanPostObjectsCallback: function(objectSupported) {
-			main._hasCanPostObjects = objectSupported;
-			console.log("POSTMESSAGE SUPPORTS OBJECTS: ",objectSupported);
-		}*/
 	};
 	
-	main.init();
+	hasTests.init();
 	return construct;
 });

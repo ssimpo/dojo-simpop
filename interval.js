@@ -67,7 +67,7 @@ define([
 				}
 			}
 		}catch(e){
-			console.info("Could not run the interval.", e);
+			console.info("Could not run the interval.", point);
 		}
 	}
 	
@@ -75,10 +75,14 @@ define([
 		// summary:
 		//		Increment the counter and return to 1 if past the max value.
 		
-		counter++;
-		counter = (
-			(counter > counterMax) ? 1 : counter
-		);
+		try{
+			counter++;
+			counter = (
+				(counter > counterMax) ? 1 : counter
+			);
+		}catch(e){
+			console.info("Could not increment the interval counter");
+		}
 	}
 	
 	function runInterval(){
@@ -91,16 +95,20 @@ define([
 		// description:
 		//		Run an interval.
 		
-		incCounter();
-		array.forEach(functionList, function(funcObj, n){
-			if((counter % funcObj.frequency) == 0){
-				funcObj.execute();
-			}
-		}, this);
+		try{
+			incCounter();
+			array.forEach(functionList, function(funcObj, n){
+				if((counter % funcObj.frequency) == 0){
+					funcObj.execute();
+				}
+			}, this);
 			
-		if(functionQueue.length > 0){
-			var func = functionQueue.shift();
-			func();
+			if(functionQueue.length > 0){
+				var func = functionQueue.shift();
+				func();
+			}
+		}catch(e){
+			console.info("Could not run the interval functions.");
 		}
 	}
 	
@@ -109,8 +117,12 @@ define([
 			// summary:
 			//		Set a property.
 			
-			if(propName === "period"){
-				period = value;
+			try{
+				if(propName === "period"){
+					period = value;
+				}
+			}catch(e){
+				console.info("Could not change property, "+propName+" to "+value+".");
 			}
 		},
 		
@@ -130,19 +142,23 @@ define([
 			//		interval; if set to 2 then it will run every second interval
 			//		...etc.
 			
-			every = ((every === undefined) ? false : every);
-			frequency = ((frequency === undefined) ? 1 : frequency);
+			try{
+				every = ((every === undefined) ? false : every);
+				frequency = ((frequency === undefined) ? 1 : frequency);
 			
-			if(every){
-				functionList.push({
-					"execute": func,
-					"frequency": frequency
-				});
-				if((frequency*2) > counterMax){
-					counterMax = (frequency*2);
+				if(every){
+					functionList.push({
+						"execute": func,
+						"frequency": frequency
+					});
+					if((frequency*2) > counterMax){
+						counterMax = (frequency*2);
+					}
+				}else{
+					functionQueue.push(func);
 				}
-			}else{
-				functionQueue.push(func);
+			}catch(e){
+				console.info("Could not add interval.");
 			}
 		},
 		
