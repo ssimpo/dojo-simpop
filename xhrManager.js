@@ -12,9 +12,11 @@ define([
 	"dojo/_base/lang",
 	"dojo/on",
 	"dojo/json",
-	"dojo/_base/array"
+	"dojo/_base/array",
+	"simpo/typeTest"
 ], function(
-	declare, interval, request, md5, lang, on, JSON, array
+	declare, interval, request, md5, lang, on, JSON,
+	array, typeTest
 ) {
 	"use strict";
 	
@@ -37,7 +39,7 @@ define([
 	var workerQueue = {};
 	var running = 0;
 	var limit = ((isWorker) ? 4 : 2);
-	var worker = null;
+	var worker = ((isWorker) ? global.worker : null);
 	var ready = false;
 	var breakout = false;
 
@@ -73,63 +75,84 @@ define([
 	}
 	
 	function xhrSuccess(data, obj){
-		decCounter();
-		if(isWorker){
-			global.postMessage({
-				"type": "xhrData",
-				"hash": obj.hash,
-				"data": data
-			});
-		}else{
-			obj.success(data);
+		try{
+			decCounter();
+			if(isWorker){
+				worker.sendMessage("gotXhr", {
+					"hash": obj.hash,
+					"data": data
+				});
+			}else{
+				obj.success(data);
+			}
+		}catch(e){
+			console.info("Failed to handle XHR success.");
 		}
 	}
 	
 	function intConstructor(args){
-		var obj = null;
+		var obj = parseIntConstructorParameters(args);
 		
-		if(args.length === 1){
-			var obj = args[0];
-		}else{
-			if(args.length > 1){
-				var obj = {
-					"url": args[0],
-					"success": args[1]
-				};
-			}
-			if(args.length > 2){
-				obj.errorMsg = args[2];
-			}
-		}
-		
-		if(isObject(obj)){
-			obj = lang.mixin({
-				"errorMsg": "Failed to load: " + obj.url,
-				"handleAs": "json",
-				"timeout": timeout,
-				"preventCache": true,
-				"hash": md5(obj.url)
-			}, obj);
+		try{
+			if(typeTest.isObject(obj)){
+				obj = lang.mixin({
+					"errorMsg": "Failed to load: " + obj.url,
+					"handleAs": "json",
+					"timeout": timeout,
+					"preventCache": true,
+					"hash": md5(obj.url)
+				}, obj);
 			
-			if(isProperty(obj, "hitch")){
-				obj.success = lang.hitch(obj.hitch, obj.success);
-				if(isProperty(obj, "onError")){
-					obj.onError = lang.hitch(obj.hitch, obj.onError);
+				if(typeTest.isProperty(obj, "hitch")){
+					obj.success = lang.hitch(obj.hitch, obj.success);
+					if(typeTest.isProperty(obj, "onError")){
+						obj.onError = lang.hitch(obj.hitch, obj.onError);
+					}
 				}
 			}
+		}catch(e){
+			console.info("Could not create a constructor for XHR.");
+		}
+		
+		return obj;
+	}
+	
+	function parseIntConstructorParameters(args){
+		var obj = null;
+		
+		try{
+			if(args.length === 1){
+				obj = args[0];
+			}else{
+				if(args.length > 1){
+					obj = {
+						"url": args[0],
+						"success": args[1]
+					};
+				}
+				if(args.length > 2){
+					obj.errorMsg = args[2];
+				}
+			}
+		}catch(e){
+			console.info("Could not parse initilization parameters.");
 		}
 		
 		return obj;
 	}
 	
 	function createPostMessage(obj){
-		var message = {
-			"type": "command",
-			"command": "getXhr",
-			"url": obj.url,
-			"timeout": obj.timeout,
-			"preventCache": obj.preventCache,
-			"hash": obj.hash
+		var message = {};
+		
+		try{
+			var message = {
+				"url": obj.url,
+				"timeout": obj.timeout,
+				"preventCache": obj.preventCache,
+				"hash": obj.hash
+			}
+		}catch(e){
+			console.info("Could not create message to send to worker.");
 		}
 		
 		return message;
@@ -142,31 +165,41 @@ define([
 		//		Fallback for XHR on failure, will retry a few
 		//		times before a total fail.
 		
-		decCounter();
-		if(!isProperty(xhrAttemptsLookup, obj.hash)){
-			xhrAttemptsLookup[obj.hash] = attempts;
-		}
-			
-		if(xhrAttemptsLookup[obj.hash] > 0){
-			xhrAttemptsLookup[obj.hash]--;
-			queue.push(obj);
-		}else{
-			if(isProperty(obj, "onError")){
-				if(isWorker){
-					console.info(obj.errorMsg);
-				}else{
-					obj.onError(e);
-				}
-			}else{
-				console.info(obj.errorMsg);
+		try{
+			decCounter();
+			if(!typeTest.isProperty(xhrAttemptsLookup, obj.hash)){
+				xhrAttemptsLookup[obj.hash] = attempts;
 			}
+			
+			if(xhrAttemptsLookup[obj.hash] > 0){
+				xhrAttemptsLookup[obj.hash]--;
+				queue.push(obj);
+			}else{
+				if(typeTest.isProperty(obj, "onError")){
+					if(isWorker){
+						console.info(obj.errorMsg);
+					}else{
+						obj.onError(e);
+					}
+				}else{
+					console.info(obj.errorMsg);
+				}
+			}
+		}catch(e){
+			console.info("Error handling a XHR error or timeout.");
 		}
 	}
 	
 	function checkQueue(){
-		if((running < limit) && (queue.length > 0) && (ready)){
-			var obj = queue.shift();
-			xhrCall(obj);
+		try{
+			if((running < limit) && (queue.length > 0) && (ready)){
+				var obj = queue.shift();
+				if((obj !== null) && (obj !== undefined)){
+					xhrCall(obj);
+				}
+			}
+		}catch(e){
+			console.info("Could not check the queue.");
 		}
 	}
 	
@@ -176,110 +209,127 @@ define([
 			"dojo/has"
 		], function(webworker, has){
 			if(has("webworker")){
-				worker = new webworker({
-					"src":"/scripts/simpo/xhrManager/worker"
-				});
-				on(worker, "message", workerOnMessage);
-				reCallQueue();
-				ready = true;
-				interval.add(checkDataQueue, true, 1);
+				try{
+					worker = new webworker({
+						"src":"/scripts/simpo/xhrManager/worker"
+					});
+					on(worker, "gotXhr", onGotXhr);
+					reCallQueue();
+					ready = true;
+					interval.add(checkDataQueue, true, 1);
+				}catch(e){
+					console.info("Could not create webworker.");
+				}
 			}else{
 				ready = true;
 			}
 		});
 	}
 	
-	function workerOnMessage(message){
-		if(isProperty(message, "message")){
-			if(isProperty(message.message, "type")){
-				if(message.message.type == "xhrData"){
-					if(isProperty(message.message, "data")){
-						if(isProperty(workerQueue, message.message.hash)){
-							parseWorkerMessage(
-								message.message.data,
-								workerQueue[message.message.hash]
-							);
-						}else{
-							console.info("Worker returned data that could not be linked to a request");
-						}
-					}
+	function onGotXhr(message){
+		try{
+			var messageTemplate = {"message" : {"data":"", "hash":""}};
+			if(typeTest.isProperty(message, messageTemplate)){
+				var data = message.message.data;
+				var hash = message.message.hash;
+			
+				if(typeTest.isProperty(workerQueue, hash)){
+					parseWorkerMessage(
+						data,
+						workerQueue[hash]
+					);
+				}else{
+					console.info("Worker returned data that could not be linked to a request.");
 				}
 			}
+		}catch(e){
+			console.info("Worker returned a message that could not be parsed.");
 		}
 	}
 
 	function parseWorkerMessage(data, obj){
-		dataQueue.push({"data": data, "obj": obj})
+		try{
+			dataQueue.push({"data": data, "obj": obj});
+		}catch(e){
+			console.info("Could not push worker result to the data queue.");
+		}
 	}
 	
 	function checkDataQueue(){
 		try{
 			if(dataQueue.length > 0){
 				var obj = dataQueue.shift();
-				var parsedData = JSON.parse(obj.data);
-				xhrSuccess(parsedData, obj.obj);
+				if(!typeTest.isObject(obj.data)){
+					var parsedData = JSON.parse(obj.data);
+					xhrSuccess(parsedData, obj.obj);
+				}else{
+					xhrSuccess(obj.data, obj.obj);
+				}
 			}
 		}catch(e){
-			console.log("Could not parse data returned for: " + obj.url);
+			console.log("Could not parse data returned for: " + obj.url + ".");
 		}
 	}
 	
 	function reCallQueue(){
-		var tempQueue = new Array();
-		array.forEach(queue, function(obj){
-			tempQueue.push(obj);
-		});
-		queue = new Array();
-		array.forEach(tempQueue, function(obj){
-			construct.add(obj);
-		});
-	}
-	
-	function isObject(value){
-		return ((Object.prototype.toString.call(value) === '[object Object]') || (typeof value === "object"));
-	}
-	
-	function isProperty(obj, propName){
-		if(isObject(obj)){
-			return ((Object.prototype.hasOwnProperty.call(obj, propName)) || (propName in obj));
+		try{
+			var tempQueue = new Array();
+			array.forEach(queue, function(obj){
+				tempQueue.push(obj);
+			});
+			queue = new Array();
+			array.forEach(tempQueue, function(obj){
+				construct.add(obj);
+			});
+		}catch(e){
+			console.info("Could not re-call the queue.");
 		}
-			
-		return false;
 	}
 	
 	var construct = {
 		set: function(propName, value){
-			if(propName === "timeout"){
-				timeout = value;
-			}else if(propName === "limitt"){
-				limit = value;
-			}else if(propName === "attempts"){
-				attempts = value;
+			try{
+				if(propName === "timeout"){
+					timeout = value;
+				}else if(propName === "limitt"){
+					limit = value;
+				}else if(propName === "attempts"){
+					attempts = value;
+				}
+			}catch(e){
+				console.info("Could not add set the property, "+propName+", to: " + value.toString() + ".");
 			}
 		},
 		
 		add: function(url, success, errorMsg){
-			var obj = intConstructor(arguments);
-			
-			if((!isWorker) && (worker !== null)){
-				var message = createPostMessage(obj);
-				workerQueue[obj.hash] = obj;
-				worker.postMessage(message);
-			}else{
-				queue.push(obj);
+			try{
+				var obj = intConstructor(arguments);
+				if(obj !== null){
+					if((!isWorker) && (worker !== null)){
+						var message = createPostMessage(obj);
+						workerQueue[obj.hash] = obj;
+						worker.sendMessage("getXhr", message);
+					}else{
+						queue.push(obj);
+					}
+				}
+			}catch(e){
+				console.info("Could not add: "+url+", to the queue.");
 			}
 		}
 	};
 	
 	function init(){
-		if(!isWorker){
-			initWorker();
-		}else{
-			interval.set("period", 500);
-			ready = true;
+		try{
+			if(!isWorker){
+				initWorker();
+			}else{
+				ready = true;
+			}
+			interval.add(checkQueue, true, 1);
+		}catch(e){
+			console.info("Could not initiate xhrManager.");
 		}
-		
-		interval.add(checkQueue, true, 1);
 	}
 	
 	init();
