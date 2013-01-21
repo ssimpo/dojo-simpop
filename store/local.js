@@ -5,16 +5,17 @@ define([
 	"dojo/_base/declare",
 	"dojo/store/Memory",
 	"dojo/aspect",
-	"simpo/interval",
 	"dojo/_base/lang",
 	"lib/lzw",
 	"lib/aes",
 	"lib/md5",
 	"dojo/json",
 	"dojo/topic",
-	"dojo/sniff"
+	"dojo/sniff",
+	"simpo/array"
 ], function(
-	declare, store, aspect, interval, lang, lzw, aes, md5, JSON, topic, sniff
+	declare, store, aspect, lang, lzw, aes, md5, JSON, topic, sniff,
+	iarray
 ){
 	"use strict";
 	
@@ -63,22 +64,18 @@ define([
 		
 		_initPopulation: function(){
 			this._idCache = this._getIdArrayFromStorage();
-			interval.add(lang.hitch(this, this._populate));
+			this._populate();
 		},
 		
 		_populate: function(){
-			if(this._idCache.length > 0){
-				var ids = new Array();
-				
-				for(var i = 0; ((i < this._idCache.length) && (i < this._slicer)); i++){
-					ids.push(this._idCache.shift());
+			iarray.forEach(this._idCache, this._slicer, function(id){
+				var obj = this._getLocalObjectByKey(id);
+				if(this._isObject(obj)){
+					this._copyLocalObjectToMemory(obj);
 				}
-				
-				this._populateStoreFromLocal(ids);
-				interval.add(lang.hitch(this, this._populate));
-			}else{
+			}, function(){
 				topic.publish("/simpo/store/local/databaseReady");
-			}
+			}, this);
 		},
 		
 		_initLocalstore: function(){
@@ -156,22 +153,6 @@ define([
 			}catch(e){
 				console.info("Could not obtain an ID-array for the browser cache.");
 				return [];
-			}
-		},
-		
-		_populateStoreFromLocal: function(ids){
-			try{
-				for(var n = 0; n < ids.length; n++){
-					//var id = this._localStore.key(n);
-					var id = ids[n];
-					var obj = this._getLocalObjectByKey(id);
-				
-					if(this._isObject(obj)){
-						this._copyLocalObjectToMemory(obj);
-					}
-				}
-			}catch(e){
-				console.info("Could not populate memory store from browser cache.");
 			}
 		},
 		
