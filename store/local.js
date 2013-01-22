@@ -10,20 +10,21 @@ define([
 	"lib/aes",
 	"lib/md5",
 	"dojo/json",
-	"dojo/topic",
 	"dojo/sniff",
-	"simpo/array"
+	"simpo/array",
+	"simpo/interval"
 ], function(
-	declare, store, aspect, lang, lzw, aes, md5, JSON, topic, sniff,
-	iarray
+	declare, store, aspect, lang, lzw, aes, md5, JSON, sniff,
+	iarray, interval
 ){
 	"use strict";
 	
-	var construct = declare(store, {
+	var construct = declare([store], {
 		"id": "simpoStoreLocal",
 		"compress": false,
 		"encrypt": false,
 		"sessionOnly": true,
+		"ready": function(){},
 		
 		"_localStore": false,
 		"_encryptionKey": "",
@@ -34,18 +35,21 @@ define([
 		"_idCache": [],
 		"_slicer": 130,
 		"_clearing": false,
+		"_initDone": false,
 		
 		constructor: function(args){
 			this._init(args);
 			
 			if(this._localStore){
 				try{
-					this._initPopulation();
 					this._attachAspects();
+					this._initPopulation();
 				}catch(e){
 					console.info("Could not load and interface "+((this.sessionOnly)?"SessionStorage":"LocalStorage")+".");
 				}
 			}
+			
+			this._initDone = true;
 		},
 		
 		_init: function(args){
@@ -69,19 +73,40 @@ define([
 		},
 		
 		_populate: function(){
+			var size = 0;
+			var items = 0;
 			iarray.forEach(this._idCache, this._slicer, function(id){
 				var obj = this._getLocalObjectByKey(id);
 				if(this._isObject(obj)){
 					this._copyLocalObjectToMemory(obj);
 					var localObjString =this._localStore.getItem(id);
+					size += localObjString.length;
+					items++;
 					//this._copyMemoryObjectToLocal(obj);
 				}else{
 					this._localStore.removeItem(id);
 				}
 			}, function(){
-				topic.publish("/simpo/store/local/databaseReady");
-				console.log(this.size);
+				var readyObj = {
+					"bubbles": false,
+					"cancelable": false,
+					"target": this,
+					"size": size,
+					"items": items
+				};
+				
+				this._checkAndRunReady(readyObj)
 			}, this);
+		},
+		
+		_checkAndRunReady: function(readyObj){
+			if(this._initDone){
+				this.ready(readyObj);
+			}else{
+				interval.add(
+					lang.hitch(this, this._checkAndRunReady, readyObj)
+				);
+			}
 		},
 		
 		size: function(callback){
