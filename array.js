@@ -23,16 +23,22 @@ define([
 					callback = lang.hitch(thisObj, callback);
 				}
 			}
-			array.forEach(chunks, function(chunk, n){
-				interval.add(function(){
-					array.forEach(chunk, func);
-					if(callback !== undefined){
-						if(n == (chunks.length - 1)){
-							callback();
+			if(chunks.length > 0){
+				array.forEach(chunks, function(chunk, n){
+					interval.add(function(){
+						array.forEach(chunk, func);
+						if(callback !== undefined){
+							if(n == (chunks.length - 1)){
+								callback();
+							}
 						}
-					}
+					});
 				});
-			});
+			}else{
+				if(callback !== undefined){
+					callback();
+				}
+			}
 		},
 		
 		_chunkArray: function(ary, chunkSize){
