@@ -33,6 +33,7 @@ define([
 		
 		"_idCache": [],
 		"_slicer": 130,
+		"_clearing": false,
 		
 		constructor: function(args){
 			this._init(args);
@@ -72,10 +73,32 @@ define([
 				var obj = this._getLocalObjectByKey(id);
 				if(this._isObject(obj)){
 					this._copyLocalObjectToMemory(obj);
+					var localObjString =this._localStore.getItem(id);
+					//this._copyMemoryObjectToLocal(obj);
+				}else{
+					this._localStore.removeItem(id);
 				}
 			}, function(){
 				topic.publish("/simpo/store/local/databaseReady");
+				console.log(this.size);
 			}, this);
+		},
+		
+		size: function(callback){
+			var size = 0;
+			var uncompressedSize = 0;
+			var self = this;
+			this._idCache = this._getIdArrayFromStorage();
+			
+			iarray.forEach(this._idCache, this._slicer, function(id){
+				var localObjString = self._localStore.getItem(id);
+				size += localObjString.length;
+				//var obj = this._uncompressAndDecrypt(localObjString);
+				//var jsonString = JSON.stringify(obj);
+				//uncompressedSize += jsonString.length;
+			}, function(){
+				callback(size, uncompressedSize);
+			});
 		},
 		
 		_initLocalstore: function(){
@@ -104,19 +127,24 @@ define([
 			}
 		},
 		
-		clear: function(doFullClear){
+		clear: function(doFullClear, callback){
 			try{
 				doFullClear = ((doFullClear == undefined) ? false : doFullClear);
 				var ids = this._getIdArrayFromStorage();
-			
-				if(!doFullClear){
-					for(var n = 0; n < this._localStore.length; n++){
-						this._removeItem(ids[n], doFullClear);
-					}
-				}else{
-					this.clear();
-					this._localStore.clear();
-				}
+				
+				this._clearing = true;
+				iarray.forEach(
+					ids, this._slicer, function(id){
+						if(!this._removeItem(id, doFullClear)){
+							console.warn("FAILED TO REMOVE ", id);
+						}
+					}, function(){
+						this._clearing = false;
+						if(callback !== undefined){
+							callback();
+						}
+					}, this
+				);
 			}catch(e){
 				console.info("Could not clear the storage.")
 			}
@@ -130,13 +158,17 @@ define([
 				try{
 					this.remove(id);
 					return true;
-				}catch(e){ }
+				}catch(e){
+					return false;
+				}
 			}else{
 				if(doFullClear){
 					try{
 						this._localStore.removeItem(id);
 						return true;
-					}catch(e){ }
+					}catch(e){
+						return false;
+					}
 				}
 			}
 			
@@ -160,25 +192,42 @@ define([
 			try{
 				if(this._getStoreIdForObject(obj) == this.id){
 					var obj2 = lang.clone(obj);
-					obj2.id = obj2.id.replace("_"+obj2._storeUNID,"");
+					obj2 = this._removeStoreIdFromId(obj2, obj2._storeUNID);
 					delete obj2._storeUNID;
 					this.put(obj2, {"id": obj2.id, "overwrite": true});
 				}
 			}catch(e){
-				console.info("Could not copy cached object to the dojo memory store.");
+				console.info("Could not copy cached object to the dojo memory store.", e);
 			}
+		},
+		
+		_removeStoreIdFromId: function(obj, storeId){
+			var replacer = new RegExp("_"+storeId+"$");
+			while(replacer.test(obj.id)){
+				obj.id = obj.id.replace(replacer, "");
+			}
+			
+			return obj;
 		},
 		
 		_copyMemoryObjectToLocal: function(obj){
 			try{
 				var obj2 = lang.clone(obj);
 				obj2._storeUNID = this.id;
+				obj2 = this._removeStoreIdFromId(obj2, obj2._storeUNID);
 				obj2.id = obj2.id+"_"+obj2._storeUNID;
-			
+				
 				var jsonString = this._stringifyWithCompressEncrypt(obj2);
-				this._localStore.setItem(obj2.id, jsonString);
+				try{
+					this._localStore.setItem(obj2.id, jsonString);
+					var localObjString = this._localStore.getItem(obj2.id);
+					return (localObjString === jsonString);
+				}catch(e){
+					return false
+				}
 			}catch(e){
 				console.info("Could not transferre dojo store object to browser cache.");
+				return false;
 			}
 		},
 		
@@ -230,7 +279,7 @@ define([
 			var nValue = this._uncompressAndDecrypt(value);
 			try{
 				if(this._isJsonObject(nValue)){
-					nValue = JSON.parse(value);
+					nValue = JSON.parse(nValue);
 				}
 			}catch(e){
 				console.info("could JSON parse the supplied value.");
@@ -284,12 +333,20 @@ define([
 		},
 		
 		_localPut: function(orginalPut){
+			if(this._clearing){
+				return function(){
+					return false;
+				}
+			}
 			orginalPut = lang.hitch(this, orginalPut);
 			
-			return function(obj, options){
+			return function(obj, options, useLocalStore){
+				useLocalStore = ((useLocalStore === undefined) ? true : useLocalStore);
 				var result = orginalPut(obj, options);
-				if(result != undefined){
-					this._copyMemoryObjectToLocal(obj);
+				if((result != undefined) && (useLocalStore)){
+					if(!this._copyMemoryObjectToLocal(obj)){
+						console.warn("Could not write " + obj.id + " to local storage.");
+					}
 				}
 				
 				return result;
