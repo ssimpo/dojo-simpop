@@ -307,8 +307,12 @@ define([
 					nValue = JSON.parse(nValue);
 				}
 			}catch(e){
-				console.info("could JSON parse the supplied value.");
-				nValue = value;
+				try{
+					nValue = eval('(' + nValue + ')');
+				}catch(e){
+					console.info("could JSON parse the supplied value.");
+					nValue = value;
+				}
 			}
 			
 			return nValue;

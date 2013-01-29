@@ -12,10 +12,11 @@ define([
 	"dojo/_base/lang",
 	"dojo/on",
 	"dojo/json",
+	"lib/jsonParse",
 	"dojo/_base/array",
 	"simpo/typeTest"
 ], function(
-	declare, interval, request, md5, lang, on, JSON,
+	declare, interval, request, md5, lang, on, JSON, JSON2,
 	array, typeTest
 ) {
 	"use strict";
@@ -255,18 +256,36 @@ define([
 		}
 	}
 	
+	function jsonParse(txt){
+		var parsed = null;
+		
+		try{
+			parsed = JSON.parse(txt);
+		}catch(e){
+			try{
+				parsed = JSON2(txt);
+			}catch(e){
+				console.warn("PARSE FAIL");
+				parsed = txt;
+			}
+		}
+		
+		return parsed;
+	}
+	
 	function checkDataQueue(){
 		try{
 			if(dataQueue.length > 0){
 				var obj = dataQueue.shift();
 				if(!typeTest.isObject(obj.data)){
-					var parsedData = JSON.parse(obj.data);
+					var parsedData = jsonParse(obj.data);
 					xhrSuccess(parsedData, obj.obj);
 				}else{
 					xhrSuccess(obj.data, obj.obj);
 				}
 			}
 		}catch(e){
+			//console.log(obj);
 			console.log("Could not parse data returned for: " + obj.url + ".");
 		}
 	}
