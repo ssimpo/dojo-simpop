@@ -72,9 +72,13 @@ define([
 		},
 		
 		isEqual: function(value1, value2){
+			function isString(value){
+				return (Object.prototype.toString.call(value) === '[object String]');
+			}
+			
 			if(value1 === value2){
 				return true;
-			}else if((construct.isString(value1)) && (construct.isString(value2))){
+			}else if((isString(value1)) && (isString(value2))){
 				return (lang.trim(value1.toLowerCase()) == lang.trim(value2.toLowerCase()));
 			}
 			
@@ -142,15 +146,15 @@ define([
 		},
 		
 		isObject: function(value){
-			return ((Object.prototype.toString.call(value) === '[object Object]') || (typeof value === "object"));
+			return construct.isType(value, "object");
 		},
 		
 		isNumber: function(value){
-			return (Object.prototype.toString.call(value) === '[object Number]');
+			return construct.isType(value, "number");
 		},
 		
 		isString: function(value){
-			return (Object.prototype.toString.call(value) === '[object String]');
+			return construct.isType(value, "string");
 		},
 		
 		isElement: function(value){
@@ -161,8 +165,12 @@ define([
 			);
 		},
 		
+		isType: function(value, type){
+			return construct.isEqual(Object.prototype.toString.call(value), "[object "+type+"]");
+		},
+		
 		isArrayBuffer: function(value){
-			return (Object.prototype.toString.call(value) === '[object ArrayBuffer]');
+			return construct.isType(value, "arrayBuffer");
 		},
 		
 		isProperty: function(value, propName){
@@ -184,10 +192,19 @@ define([
 						if(!construct.isProperty(value, key)){
 							return false;
 						}else{
-							var cTest = propName[key];
-							if(construct.isObject(cTest) || construct.isArray(cTest)){
-								var cValue = value[key];
-								if(!construct.isProperty(cTest, cValue)){
+							var obj = propName[key];
+							var subValue = value[key];
+							if(construct.isString(obj)){
+								if(obj !== ""){
+									var testFunc = construct["is" + construct._capitaliseFirstLetter(obj)];
+									if(!construct.isType(subValue, obj)){
+										return false;
+									}
+								}
+							}
+							
+							if(construct.isObject(obj) || construct.isArray(obj)){
+								if(!construct.isProperty(subValue, obj)){
 									return false;
 								}
 							}
@@ -199,6 +216,10 @@ define([
 			}
 			
 			return false;
+		},
+		
+		_capitaliseFirstLetter: function(txt){
+			return txt.charAt(0).toUpperCase() + txt.slice(1);
 		},
 		
 		isFunction: function(value){
