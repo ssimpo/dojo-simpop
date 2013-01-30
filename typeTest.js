@@ -166,7 +166,11 @@ define([
 		},
 		
 		isType: function(value, type){
-			return construct.isEqual(Object.prototype.toString.call(value), "[object "+type+"]");
+			return (
+				construct.isEqual(Object.prototype.toString.call(value), "[object "+type+"]")
+				||
+				construct.isEqual(typeof value, type)
+			);
 		},
 		
 		isArrayBuffer: function(value){
