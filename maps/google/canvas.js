@@ -12,9 +12,11 @@ define([
 	"dojo/i18n!./nls/canvas",
 	"dojo/text!./views/canvas.html",
 	"../google",
-	"dojo/_base/lang"
+	"dojo/_base/lang",
+	"simpo/interval"
 ], function(
-	declare, _widget, _templated, i18n, strings, template, googleLoader, lang
+	declare, _widget, _templated, i18n, strings, template, googleLoader,
+	lang, interval
 ) {
 	"use strict";
 	
@@ -31,12 +33,21 @@ define([
 		"_geoCoder": {},
 		"callback": function(){},
 		"_points": [],
+		"_loaded": false,
 		
 		postCreate: function(){
 			this._init();
 		},
 		
 		centre: function(lat, lng){
+			if(this._loaded){
+				this._centre(lat, lng);
+			}else{
+				interval.add(lang.hitch(this, this.centre, lat, lng));
+			}
+		},
+		
+		_centre: function(lat, lng){
 			if(this._isString(lat)){
 				this._postcodeLookup(lat, lang.hitch(this, function(lat, lng){
 					var latLng = new google.maps.LatLng(lat, lng);
@@ -60,20 +71,37 @@ define([
 			}
 		},
 		
-		plot: function(lat, lng){
+		plot: function(lat, lng, callback){
+			if(this._loaded){
+				this._plot(lat, lng);
+			}else{
+				interval.add(lang.hitch(this, this.plot, lat, lng, callback));
+			}
+		},
+		
+		_plot: function(lat, lng, callback){
 			var marker = new google.maps.Marker({
 				"map": this._map
 			});
 			if(this._isString(lat)){
+				callback = lng;
 				this._postcodeLookup(lat, lang.hitch(this, function(lat, lng){
 					var latLng = new google.maps.LatLng(lat, lng);
 					marker.setPosition(latLng);
+					if(callback !== undefined){
+						callback(marker);
+					}
 				}));
 			}else{
 				var latLng = new google.maps.LatLng(lat, lng);
 				marker.setPosition(latLng);
+				if(callback !== undefined){
+					callback(marker);
+				}
 			}
 			this._points.push(marker);
+			
+			
 		},
 		
 		_isNumber: function(value){
@@ -114,8 +142,6 @@ define([
 		},
 		
 		_googleMapsLoaded: function(gmap){
-			console.log("CALLBACK");
-			
 			this._geoCoder = new gmap.Geocoder();
 			var mapOptions = {
 				center: new gmap.LatLng(-34.397, 150.644),
@@ -127,9 +153,8 @@ define([
 				mapOptions
 			);
 			
+			this._loaded = true;
 			this.callback(this);
-			
-			//this.centre("TS4 2BP");
 		}
 	});
 	
