@@ -5,9 +5,10 @@
 // author:
 //		Stephen Simpson <me@simpo.org>, <http://simpo.org>
 define([
-	"dojo/_base/array"
+	"dojo/_base/array",
+	"dojo/_base/lang"
 ], function(
-	array
+	array, lang
 ){
 	"use strict";
 	
@@ -21,8 +22,123 @@ define([
 	}
 	
 	var construct = {
+		"_trueValues": ["yes", "true", "on", "checked", "ticked", "1"],
+		"_falseValues": ["no", "false", "off", "unchecked", "unticked", "0"],
+		
+		isTrue: function(value){
+			if(value === true){
+				return true;
+			}
+			if(value === 1){
+				return true;
+			}
+			
+			try{
+				var stringValue = value.toString();
+				for(var i = 0; i < construct._trueValues.length; i++){
+					if(this.isEqual(stringValue, construct._trueValues[i])){
+						return true;
+					}
+				}
+			}catch(e){
+				return false;
+			}
+			
+			return false;
+		},
+		
+		isFalse: function(value){
+			if(value === false){
+				return true;
+			}
+			if(value === 0){
+				return true;
+			}
+			if(this._isBlank(value)){
+				return true;
+			}
+			try{
+				var stringValue = value.toString();
+				for(var i = 0; i < construct._falseValues.length; i++){
+					if(this.isEqual(stringValue, construct._falseValues[i])){
+						return true;
+					}
+				}
+			}catch(e){
+				return false;
+			}
+			
+			return false;
+		},
+		
+		isEqual: function(value1, value2){
+			if(value1 === value2){
+				return true;
+			}else if((construct.isString(value1)) && (construct.isString(value2))){
+				return (lang.trim(value1.toLowerCase()) == lang.trim(value2.toLowerCase()));
+			}
+			
+			return false;
+		},
+		
 		isArray: function(value){
 			return (Object.prototype.toString.call(value) === '[object Array]');
+		},
+		
+		_isBlankArray: function(ary){
+			if(ary.length == 0){
+				return true;
+			}else{
+				for(var i = 0; i < ary.length; i++){
+					if(!construct.isBlank(ary[i])){
+						return false;
+					}
+				}
+			}
+			
+			return true;
+		},
+		
+		_isBlankObject: function(obj){
+			for(var key in obj){
+				if(construct.isProperty(obj, key)){
+					return false;
+				}
+			}
+			return true;
+		},
+		
+		isEmpty: function(value){
+			if(construct.isArray(value)){
+				return construct._isBlankArray(value);
+			}else if(construct.isObject(value)){
+				return construct._isBlankObject(value);
+			}
+			
+			return false;
+		},
+		
+		isBlank: function(value){
+			if((value === null) || (value === undefined) || (value === "") || (value === false) || (value === 0)){
+				return true;
+			}
+			if(typeof value == "undefined"){
+				return true;
+			}
+			
+			if(construct.isString(value)){
+				return (lang.trim(value.replace(/\&nbsp\;/g," ")) === "");
+			}else if(construct.isArray(value)){
+				return construct.isEmpty(value);
+			}else if(construct.isObject(value)){
+				if(construct.isElement(value)){
+					return construct.isBlank(domAttr.get(value, "innerHTML"));
+				}else{
+					return construct.isEmpty(value);
+				}
+			}
+			
+			return false;
 		},
 		
 		isObject: function(value){
@@ -52,7 +168,7 @@ define([
 		isProperty: function(value, propName){
 			if(construct.isObject(value)){
 				if(construct.isString(propName)){
-					return ((Object.prototype.toString.call(value) === '[object Object]') || (typeof value === "object"));
+					return ((Object.prototype.hasOwnProperty.call(value, propName)) || (propName in value));
 				}else if(construct.isArray(propName)){
 					var allFound = true;
 					array.every(propName, function(property){
@@ -64,21 +180,21 @@ define([
 					
 					return allFound;
 				}else if(construct.isObject(propName)){
-					var allFound = true;
 					for(var key in propName){
 						if(!construct.isProperty(value, key)){
-							allFound = false;
-						}
-						
-						var cValue = propName[key];
-						if((construct.isArray(cValue)) || (construct.isObject(cValue))){
-							if(!construct.isProperty(value, cValue)){
-								allFound = false;
+							return false;
+						}else{
+							var cTest = propName[key];
+							if(construct.isObject(cTest) || construct.isArray(cTest)){
+								var cValue = value[key];
+								if(!construct.isProperty(cTest, cValue)){
+									return false;
+								}
 							}
 						}
 					}
 					
-					return allFound;
+					return true;
 				}
 			}
 			
