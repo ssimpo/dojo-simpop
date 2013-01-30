@@ -233,7 +233,7 @@ define([
 			if(typeTest.isProperty(message, messageTemplate)){
 				var data = message.message.data;
 				var hash = message.message.hash;
-			
+				
 				if(typeTest.isProperty(workerQueue, hash)){
 					parseWorkerMessage(
 						data,
