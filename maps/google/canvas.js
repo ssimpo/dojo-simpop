@@ -114,8 +114,6 @@ define([
 		},
 		
 		_googleMapsLoaded: function(gmap){
-			console.log("CALLBACK");
-			
 			this._geoCoder = new gmap.Geocoder();
 			var mapOptions = {
 				center: new gmap.LatLng(-34.397, 150.644),
