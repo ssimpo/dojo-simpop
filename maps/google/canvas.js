@@ -12,9 +12,15 @@ define([
 	"dojo/i18n!./nls/canvas",
 	"dojo/text!./views/canvas.html",
 	"../google",
-	"dojo/_base/lang"
+	"dojo/_base/lang",
+	"dojo/_base/array",
+	"simpo/interval",
+	"dojo/aspect",
+	"simpo/typeTest",
+	"dojo/on"
 ], function(
-	declare, _widget, _templated, i18n, strings, template, googleLoader, lang
+	declare, _widget, _templated, i18n, strings, template, googleLoader,
+	lang, array, interval, aspect, typeTest, on
 ) {
 	"use strict";
 	
@@ -27,68 +33,102 @@ define([
 		//		The loaded template string containing the HTML formatted template for this widget.
 		"templateString": template,
 		
-		"_map": {},
+		"map": {},
 		"_geoCoder": {},
 		"callback": function(){},
 		"_points": [],
+		"_loaded": false,
+		"_onLoadFunctions": [],
 		
 		postCreate: function(){
 			this._init();
 		},
 		
 		centre: function(lat, lng){
-			if(this._isString(lat)){
+			if(this._loaded){
+				this._centre(lat, lng);
+			}else{
+				interval.add(lang.hitch(this, this.centre, lat, lng));
+			}
+		},
+		
+		_centre: function(lat, lng){
+			if(typeTest.isString(lat)){
 				this._postcodeLookup(lat, lang.hitch(this, function(lat, lng){
 					var latLng = new google.maps.LatLng(lat, lng);
-					this._map.panTo(latLng);
+					this.map.panTo(latLng);
 				}));
-			}else if(this._isArray(lat)){
+			}else if(typeTest.isArray(lat)){
 				this._postcodeLookup(lat, lang.hitch(this, function(lat, lng){
 					//var latLng = new google.maps.LatLng(lat, lng);
-					//this._map.panTo(latLng);
+					//this.map.panTo(latLng);
 				}));
-			}else if(this._isNumber(lat) || this._isNumber(lng)){
+			}else if(typeTest.isNumber(lat) || typeTest.isNumber(lng)){
 				var latLng = new google.maps.LatLng(lat, lng);
-				this._map.panTo(latLng);
+				this.map.panTo(latLng);
 			}
 		},
 		
 		clear: function(){
-			while(this._points.length > 0){
-				var point = this._points.shift();
-				point.setMap(null);
+			if(this._loaded){
+				while(this._points.length > 0){
+					var point = this._points.shift();
+					point.setMap(null);
+				}
 			}
 		},
 		
-		plot: function(lat, lng){
+		plot: function(lat, lng, callback){
+			if(this._loaded){
+				this._plot(lat, lng);
+			}else{
+				interval.add(lang.hitch(this, this.plot, lat, lng, callback));
+			}
+		},
+		
+		_plot: function(lat, lng, callback){
 			var marker = new google.maps.Marker({
-				"map": this._map
+				"map": this.map
 			});
-			if(this._isString(lat)){
+			if(typeTest.isString(lat)){
+				callback = lng;
 				this._postcodeLookup(lat, lang.hitch(this, function(lat, lng){
 					var latLng = new google.maps.LatLng(lat, lng);
 					marker.setPosition(latLng);
+					if(callback !== undefined){
+						callback(marker);
+					}
 				}));
 			}else{
 				var latLng = new google.maps.LatLng(lat, lng);
 				marker.setPosition(latLng);
+				if(callback !== undefined){
+					callback(marker);
+				}
 			}
 			this._points.push(marker);
-		},
-		
-		_isNumber: function(value){
-			return (Object.prototype.toString.call(value) === '[object Number]');
-		},
-		
-		_isArray: function(value){
-			return (Object.prototype.toString.call(value) === '[object Array]');
-		},
-		
-		_isString: function(value){
-			return (Object.prototype.toString.call(value) === '[object String]');
+			
+			
 		},
 		
 		_init: function(){
+			var self = this;
+			
+			aspect.around(this, "on", function(originalOn){
+				return function(target, type, listener, dontFix){
+					var caller = function(){
+						return on(self.map, type, listener, dontFix);
+					}
+					
+					if(self._loaded){
+						return caller();
+					}else{
+						self._onLoadFunctions.push(caller);
+						return null;
+					}
+				};
+			});
+			
 			if(window.google !== undefined){
 				if(window.google.maps !== undefined){
 					return this._callback(google.maps);
@@ -120,14 +160,20 @@ define([
 				zoom: 11,
 				mapTypeId: gmap.MapTypeId.ROADMAP
 			};
-			this._map = new gmap.Map(
+			this.map = new gmap.Map(
 				this.domNode,
 				mapOptions
 			);
 			
-			this.callback(this);
+			this._loaded = true;
 			
-			//this.centre("TS4 2BP");
+			if(this._onLoadFunctions.length > 0){
+				array.forEach(this._onLoadFunctions, function(func){
+					func();
+				});
+			}
+			
+			this.callback(this);
 		}
 	});
 	
