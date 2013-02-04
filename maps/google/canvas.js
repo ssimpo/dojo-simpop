@@ -117,13 +117,14 @@ define([
 			aspect.around(this, "on", function(originalOn){
 				return function(target, type, listener, dontFix){
 					var caller = function(){
-						on(self.map, type, listener, dontFix);
+						return on(self.map, type, listener, dontFix);
 					}
 					
 					if(self._loaded){
-						caller();
+						return caller();
 					}else{
 						self._onLoadFunctions.push(caller);
+						return null;
 					}
 				};
 			});
@@ -137,7 +138,6 @@ define([
 			new googleLoader({
 				"callback": lang.hitch(this, this._googleMapsLoaded)
 			});
-			
 			
 			return true;
 		},
