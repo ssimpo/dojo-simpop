@@ -80,7 +80,7 @@ define([
 		
 		plot: function(lat, lng, callback){
 			if(this._loaded){
-				this._plot(lat, lng);
+				this._plot(lat, lng, callback);
 			}else{
 				interval.add(lang.hitch(this, this.plot, lat, lng, callback));
 			}
@@ -107,8 +107,6 @@ define([
 				}
 			}
 			this._points.push(marker);
-			
-			
 		},
 		
 		_init: function(){
