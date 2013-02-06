@@ -56,7 +56,7 @@ define([
 			if(typeTest.isString(lat)){
 				this._postcodeLookup(lat, lang.hitch(this, function(lat, lng){
 					var latLng = new google.maps.LatLng(lat, lng);
-					this.map.panTo(latLng);
+					this.map.setCenter(latLng);
 				}));
 			}else if(typeTest.isArray(lat)){
 				this._postcodeLookup(lat, lang.hitch(this, function(lat, lng){
@@ -65,7 +65,7 @@ define([
 				}));
 			}else if(typeTest.isNumber(lat) || typeTest.isNumber(lng)){
 				var latLng = new google.maps.LatLng(lat, lng);
-				this.map.panTo(latLng);
+				this.map.setCenter(latLng);
 			}
 		},
 		
@@ -144,7 +144,8 @@ define([
 		
 		_postcodeLookup: function(postcode, callback){
 			this._geoCoder.geocode({
-				"address": postcode
+				"address": postcode,
+				"region": "GB"
 			}, function(result){
 				callback(
 					result[0].geometry.location.Ya,
