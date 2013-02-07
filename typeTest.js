@@ -5,9 +5,10 @@
 // author:
 //		Stephen Simpson <me@simpo.org>, <http://simpo.org>
 define([
-	"dojo/_base/array"
+	"dojo/_base/array",
+	"dojo/_base/lang"
 ], function(
-	array
+	array, lang
 ){
 	"use strict";
 	
@@ -21,20 +22,139 @@ define([
 	}
 	
 	var construct = {
+		"_trueValues": ["yes", "true", "on", "checked", "ticked", "1"],
+		"_falseValues": ["no", "false", "off", "unchecked", "unticked", "0"],
+		
+		isTrue: function(value){
+			if(value === true){
+				return true;
+			}
+			if(value === 1){
+				return true;
+			}
+			
+			try{
+				var stringValue = value.toString();
+				for(var i = 0; i < construct._trueValues.length; i++){
+					if(this.isEqual(stringValue, construct._trueValues[i])){
+						return true;
+					}
+				}
+			}catch(e){
+				return false;
+			}
+			
+			return false;
+		},
+		
+		isFalse: function(value){
+			if(value === false){
+				return true;
+			}
+			if(value === 0){
+				return true;
+			}
+			if(this._isBlank(value)){
+				return true;
+			}
+			try{
+				var stringValue = value.toString();
+				for(var i = 0; i < construct._falseValues.length; i++){
+					if(this.isEqual(stringValue, construct._falseValues[i])){
+						return true;
+					}
+				}
+			}catch(e){
+				return false;
+			}
+			
+			return false;
+		},
+		
+		isEqual: function(value1, value2){
+			function isString(value){
+				return (Object.prototype.toString.call(value) === '[object String]');
+			}
+			
+			if(value1 === value2){
+				return true;
+			}else if((isString(value1)) && (isString(value2))){
+				return (lang.trim(value1.toLowerCase()) == lang.trim(value2.toLowerCase()));
+			}
+			
+			return false;
+		},
+		
 		isArray: function(value){
 			return (Object.prototype.toString.call(value) === '[object Array]');
 		},
 		
+		_isBlankArray: function(ary){
+			if(ary.length == 0){
+				return true;
+			}else{
+				for(var i = 0; i < ary.length; i++){
+					if(!construct.isBlank(ary[i])){
+						return false;
+					}
+				}
+			}
+			
+			return true;
+		},
+		
+		_isBlankObject: function(obj){
+			for(var key in obj){
+				if(construct.isProperty(obj, key)){
+					return false;
+				}
+			}
+			return true;
+		},
+		
+		isEmpty: function(value){
+			if(construct.isArray(value)){
+				return construct._isBlankArray(value);
+			}else if(construct.isObject(value)){
+				return construct._isBlankObject(value);
+			}
+			
+			return false;
+		},
+		
+		isBlank: function(value){
+			if((value === null) || (value === undefined) || (value === "") || (value === false) || (value === 0)){
+				return true;
+			}
+			if(typeof value == "undefined"){
+				return true;
+			}
+			
+			if(construct.isString(value)){
+				return (lang.trim(value.replace(/\&nbsp\;/g," ")) === "");
+			}else if(construct.isArray(value)){
+				return construct.isEmpty(value);
+			}else if(construct.isObject(value)){
+				if(construct.isElement(value)){
+					return construct.isBlank(domAttr.get(value, "innerHTML"));
+				}else{
+					return construct.isEmpty(value);
+				}
+			}
+			
+			return false;
+		},
+		
 		isObject: function(value){
-			return ((Object.prototype.toString.call(value) === '[object Object]') || (typeof value === "object"));
+			return construct.isType(value, "object");
 		},
 		
 		isNumber: function(value){
-			return (Object.prototype.toString.call(value) === '[object Number]');
+			return construct.isType(value, "number");
 		},
 		
 		isString: function(value){
-			return (Object.prototype.toString.call(value) === '[object String]');
+			return construct.isType(value, "string");
 		},
 		
 		isElement: function(value){
@@ -45,14 +165,22 @@ define([
 			);
 		},
 		
+		isType: function(value, type){
+			return (
+				construct.isEqual(Object.prototype.toString.call(value), "[object "+type+"]")
+				||
+				construct.isEqual(typeof value, type)
+			);
+		},
+		
 		isArrayBuffer: function(value){
-			return (Object.prototype.toString.call(value) === '[object ArrayBuffer]');
+			return construct.isType(value, "arrayBuffer");
 		},
 		
 		isProperty: function(value, propName){
 			if(construct.isObject(value)){
 				if(construct.isString(propName)){
-					return ((Object.prototype.toString.call(value) === '[object Object]') || (typeof value === "object"));
+					return ((Object.prototype.hasOwnProperty.call(value, propName)) || (propName in value));
 				}else if(construct.isArray(propName)){
 					var allFound = true;
 					array.every(propName, function(property){
@@ -64,25 +192,38 @@ define([
 					
 					return allFound;
 				}else if(construct.isObject(propName)){
-					var allFound = true;
 					for(var key in propName){
 						if(!construct.isProperty(value, key)){
-							allFound = false;
-						}
-						
-						var cValue = propName[key];
-						if((construct.isArray(cValue)) || (construct.isObject(cValue))){
-							if(!construct.isProperty(value, cValue)){
-								allFound = false;
+							return false;
+						}else{
+							var obj = propName[key];
+							var subValue = value[key];
+							if(construct.isString(obj)){
+								if(obj !== ""){
+									var testFunc = construct["is" + construct._capitaliseFirstLetter(obj)];
+									if(!construct.isType(subValue, obj)){
+										return false;
+									}
+								}
+							}
+							
+							if(construct.isObject(obj) || construct.isArray(obj)){
+								if(!construct.isProperty(subValue, obj)){
+									return false;
+								}
 							}
 						}
 					}
 					
-					return allFound;
+					return true;
 				}
 			}
 			
 			return false;
+		},
+		
+		_capitaliseFirstLetter: function(txt){
+			return txt.charAt(0).toUpperCase() + txt.slice(1);
 		},
 		
 		isFunction: function(value){
