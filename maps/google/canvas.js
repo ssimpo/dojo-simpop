@@ -56,7 +56,7 @@ define([
 			if(typeTest.isString(lat)){
 				this._postcodeLookup(lat, lang.hitch(this, function(lat, lng){
 					var latLng = new google.maps.LatLng(lat, lng);
-					this.map.setCenter(latLng);
+					this.map.panTo(latLng);
 				}));
 			}else if(typeTest.isArray(lat)){
 				this._postcodeLookup(lat, lang.hitch(this, function(lat, lng){
@@ -65,7 +65,7 @@ define([
 				}));
 			}else if(typeTest.isNumber(lat) || typeTest.isNumber(lng)){
 				var latLng = new google.maps.LatLng(lat, lng);
-				this.map.setCenter(latLng);
+				this.map.panTo(latLng);
 			}
 		},
 		
@@ -80,7 +80,7 @@ define([
 		
 		plot: function(lat, lng, callback){
 			if(this._loaded){
-				this._plot(lat, lng);
+				this._plot(lat, lng, callback);
 			}else{
 				interval.add(lang.hitch(this, this.plot, lat, lng, callback));
 			}
