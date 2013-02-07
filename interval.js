@@ -98,7 +98,12 @@ define([
 		try{
 			incCounter();
 			array.forEach(functionList, function(funcObj, n){
-				if((counter % funcObj.frequency) == 0){
+				var cCounter = (counter - funcObj.warp);
+				if(cCounter <= 0){
+					cCounter = (counterMax - cCounter);
+				}
+				
+				if((cCounter % funcObj.frequency) == 0){
 					funcObj.execute();
 				}
 			}, this);
@@ -111,6 +116,11 @@ define([
 			console.info("Could not run the interval functions.");
 		}
 	}
+	
+	function rndInt(min, max) {
+		return Math.floor(Math.random() * (max - min + 1)) + min;
+	}
+
 	
 	var construct = {
 		set: function(propName, value){
@@ -149,7 +159,8 @@ define([
 				if(every){
 					functionList.push({
 						"execute": func,
-						"frequency": frequency
+						"frequency": frequency,
+						"warp": rndInt(0,frequency-1)
 					});
 					if((frequency*2) > counterMax){
 						counterMax = (frequency*2);
