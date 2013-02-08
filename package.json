@@ -1,0 +1,20 @@
+{
+    "name": "Simpo Dojo",
+    "description": "A Dojo code, widgets, dijits and modules collection.  Feel free to use them and fork this project.",
+    "version": "0.5",
+    "keywords": ["JavaScript", "Dojo", "Toolkit", "DojoX"],
+    "maintainers": [{
+        "name": "Stephen Simpson"
+    }],
+    "contributors": [{
+        "name": "Stephen Simpson"
+    }],
+    "dependencies": {
+        "dojo": "~1.8.1",
+        "dijit": "~1.8.1",
+        "dojox": "~1.8.1"
+    },
+    "main": "src",
+    "homepage": "http://simpo.org/",
+    "dojoBuild": "simpo.profile.js"
+}
