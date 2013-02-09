@@ -14,10 +14,11 @@ define([
 	"dojo/json",
 	"lib/jsonParse",
 	"dojo/_base/array",
-	"simpo/typeTest"
+	"simpo/typeTest",
+	"dojo/Deferred"
 ], function(
 	declare, interval, request, md5, lang, on, JSON, JSON2,
-	array, typeTest
+	array, typeTest, deferred
 ) {
 	"use strict";
 	
@@ -53,12 +54,11 @@ define([
 		try{
 			if(obj !== null){
 				running++;
+				
 				request(
-					obj.url, {
-						"handleAs": ((isWorker) ? "text" : obj.handleAs),
-						"preventCache": obj.preventCache,
-						"timeout": obj.timeout
-					}
+					obj.url, lang.mixin(obj,{
+						handleAs: ((isWorker) ? "text" : obj.handleAs)
+					})
 				).then(
 					function(data){
 						xhrSuccess(data, obj);
@@ -126,10 +126,15 @@ define([
 				obj = args[0];
 			}else{
 				if(args.length > 1){
-					obj = {
-						"url": args[0],
-						"success": args[1]
-					};
+					if(typeTest.isObject(args[0])){
+						obj = args[0];
+					}else{
+						obj = {
+							"url": args[0]
+						};
+					}
+					obj.success = args[1];
+					
 				}
 				if(args.length > 2){
 					obj.errorMsg = args[2];
@@ -150,7 +155,10 @@ define([
 				"url": obj.url,
 				"timeout": obj.timeout,
 				"preventCache": obj.preventCache,
-				"hash": obj.hash
+				"hash": obj.hash,
+				"handleAs": obj.handleAs,
+				"method": (typeTest.isProperty(obj, "method") ? obj.method : "get"),
+				"data": (typeTest.isProperty(obj, "data") ? obj.data : "data")
 			}
 		}catch(e){
 			console.info("Could not create message to send to worker.");
@@ -212,7 +220,7 @@ define([
 			if(has("webworker")){
 				try{
 					worker = new webworker({
-						"src":"/scripts/simpo/xhrManager/worker"
+						"src":"simpo/xhrManager/worker"
 					});
 					on(worker, "gotXhr", onGotXhr);
 					reCallQueue();
@@ -285,8 +293,7 @@ define([
 				}
 			}
 		}catch(e){
-			//console.log(obj);
-			console.log("Could not parse data returned for: " + obj.url + ".");
+			console.info("Could not parse data returned for: " + obj.url + ".");
 		}
 	}
 	
