@@ -68,10 +68,10 @@ define([
 					},
 					function(progress){
 						if(isWorker){
-							worker.sendMessage("progressXhr", {
+							/*worker.sendMessage("progressXhr", {
 								"hash": obj.hash,
 								"message": safeClone(progress)
-							});
+							});*/
 						}else{
 							obj.deferred.progress(progress);
 						}
@@ -109,10 +109,12 @@ define([
 					"data": data
 				});
 			}else{
-				if(typeTest.isProperty(obj, "success")){
-					obj.success(data);
+				if(!obj.deferred.isCanceled()){
+					if(typeTest.isProperty(obj, "success")){
+						obj.success(data);
+					}
+					obj.deferred.resolve(data);
 				}
-				obj.deferred.resolve(data);
 			}
 		}catch(e){
 			console.info("Failed to handle XHR success.");
@@ -441,8 +443,8 @@ define([
 		}
 	}
 	
-	function failedToAdd(){
-		interval.add(function(obj, url){
+	function failedToAdd(obj, url){
+		interval.add(function(){
 			// Hack to ensure it is ran after a the return;
 			interval.add(function(){
 				rejectDeferred(obj, "Could not add: "+url+", to the queue.");
@@ -498,7 +500,7 @@ define([
 			}
 			interval.add(checkQueue, true, 1);
 		}catch(e){
-			console.info("Could not initiate xhrManager.");
+			console.info("Could not initiate xhrManager.",e);
 		}
 	}
 	
