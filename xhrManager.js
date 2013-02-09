@@ -70,7 +70,7 @@ define([
 						if(isWorker){
 							worker.sendMessage("progressXhr", {
 								"hash": obj.hash,
-								"message": progress
+								"message": safeClone(progress)
 							});
 						}else{
 							obj.deferred.progress(progress);
@@ -83,6 +83,21 @@ define([
 		}catch(e){
 			console.info(obj.errorMsg);
 		}
+	}
+	
+	function safeClone(obj){
+		var message = new Object();
+		
+		for(var key in progress){
+			var item = progress[key];
+			if(typeTest.isString(item) || typeTest.isNumber(item)){
+				message[key] = item;
+			}else if(typeTest.isObject(item)){
+				//message[key] = safeClone(item);
+			}
+		}
+		
+		return message;
 	}
 	
 	function xhrSuccess(data, obj){
