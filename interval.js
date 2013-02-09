@@ -7,9 +7,10 @@
 //		Stephen Simpson <me@simpo.org>, <http://simpo.org>
 define([
 	"dojo/_base/declare",
-	"dojo/_base/array"
+	"dojo/_base/array",
+	"dojo/Deferred"
 ], function(
-	declare, array
+	declare, array, Deferred
 ) {
 	"use strict";
 	
@@ -97,20 +98,56 @@ define([
 		
 		try{
 			incCounter();
+			
+			var cancelled = new Array();
 			array.forEach(functionList, function(funcObj, n){
 				var cCounter = (counter - funcObj.warp);
 				if(cCounter <= 0){
 					cCounter = (counterMax - cCounter);
 				}
 				
-				if((cCounter % funcObj.frequency) == 0){
-					funcObj.execute();
+				if(!funcObj.deferred.isCanceled()){
+					if((cCounter % funcObj.frequency) == 0){
+						try{
+							funcObj.execute();
+							funcObj.deferred.progress({
+								"status": construct.INTERVALRAN
+							});
+						}catch(e){
+							funcObj.deferred.progress({
+								"status": construct.INTERVALFAILED,
+								"error": e
+							});
+						}
+					}
+				}else{
+					cancelled.push(n);
 				}
 			}, this);
 			
+			array.forEach(cancelled, function(n){
+				functionList.splice(n, 1);
+			}, this);
+			
 			if(functionQueue.length > 0){
-				var func = functionQueue.shift();
-				func();
+				var funcObj = functionQueue.shift();
+				while((functionQueue.length > 0) || (funcObj.deferred.isCanceled())){
+					funcObj = functionQueue.shift();
+				}
+				
+				if(!funcObj.deferred.isCanceled()){
+					try{
+						funcObj.execute();
+						funcObj.deferred.resolved({
+							"status": construct.INTERVALRAN
+						});
+					}catch(e){
+						funcObj.deferred.reject({
+							"status": construct.INTERVALFAILED,
+							"error": e
+						});
+					}
+				}
 			}
 		}catch(e){
 			console.info("Could not run the interval functions.");
@@ -120,9 +157,23 @@ define([
 	function rndInt(min, max) {
 		return Math.floor(Math.random() * (max - min + 1)) + min;
 	}
+	
+	function failedToAdd(deferred, e){
+		setTimeout(
+			function(){
+				deferred.reject({
+					"status": construct.INTERVALFAILED,
+					"error": e
+				});
+			}, 1000*2
+		);
+	}
 
 	
 	var construct = {
+		"INTERVALRAN": 1,
+		"INTERVALFAILED": 2,
+		
 		set: function(propName, value){
 			// summary:
 			//		Set a property.
@@ -155,21 +206,27 @@ define([
 			try{
 				every = ((every === undefined) ? false : every);
 				frequency = ((frequency === undefined) ? 1 : frequency);
-			
+				
+				var obj = {
+					"execute": func,
+					"deferred": new Deferred()
+				};
 				if(every){
-					functionList.push({
-						"execute": func,
-						"frequency": frequency,
-						"warp": rndInt(0,frequency-1)
-					});
+					obj.frequency = frequency;
+					obj.warp = rndInt(0,frequency-1);
+					functionList.push(obj);
 					if((frequency*2) > counterMax){
 						counterMax = (frequency*2);
 					}
 				}else{
-					functionQueue.push(func);
+					functionQueue.push(obj);
 				}
+				
+				return obj.deferred;
 			}catch(e){
-				console.info("Could not add interval.");
+				var deferred = new Deferred();
+				failedToAdd(deferred, "Could not add interval.");
+				return deferred;
 			}
 		},
 		
