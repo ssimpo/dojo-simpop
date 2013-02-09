@@ -12,7 +12,7 @@ define([
 	"dojo/has",
 	"dojo/on",
 	"dojo/_base/lang",
-	"dojo/JSON"
+	"dojo/json"
 ], function(
 	declare, Evented, require, typeTest, has, on, lang, JSON
 ){
