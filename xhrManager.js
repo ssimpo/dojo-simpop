@@ -18,7 +18,7 @@ define([
 	"dojo/Deferred"
 ], function(
 	declare, interval, request, md5, lang, on, JSON, JSON2,
-	array, typeTest, deferred
+	array, typeTest, Deferred
 ) {
 	"use strict";
 	
@@ -84,7 +84,10 @@ define([
 					"data": data
 				});
 			}else{
-				obj.success(data);
+				if(typeTest.isProperty(obj, "success")){
+					obj.success(data);
+				}
+				obj.deferred.resolve(data);
 			}
 		}catch(e){
 			console.info("Failed to handle XHR success.");
@@ -101,11 +104,14 @@ define([
 					"handleAs": "json",
 					"timeout": timeout,
 					"preventCache": true,
-					"hash": md5(obj.url)
+					"hash": md5(obj.url),
+					"deferred": new Deferred()
 				}, obj);
 			
 				if(typeTest.isProperty(obj, "hitch")){
-					obj.success = lang.hitch(obj.hitch, obj.success);
+					if(typeTest.isProperty(obj, "success")){
+						obj.success = lang.hitch(obj.hitch, obj.success);
+					}
 					if(typeTest.isProperty(obj, "onError")){
 						obj.onError = lang.hitch(obj.hitch, obj.onError);
 					}
@@ -184,14 +190,10 @@ define([
 				xhrAttemptsLookup[obj.hash]--;
 				queue.push(obj);
 			}else{
-				if(typeTest.isProperty(obj, "onError")){
-					if(isWorker){
-						console.info(obj.errorMsg);
-					}else{
-						obj.onError(e);
-					}
-				}else{
+				if(isWorker){
 					console.info(obj.errorMsg);
+				}else{
+					rejectDeferred(obj, e);
 				}
 			}
 		}catch(e){
@@ -273,12 +275,56 @@ define([
 			try{
 				parsed = JSON2(txt);
 			}catch(e){
-				console.warn("PARSE FAIL");
-				parsed = txt;
+				
 			}
 		}
 		
 		return parsed;
+	}
+	
+	function xmlParse(text){
+		var parsed = null;
+		
+		try{
+			if(window.DOMParser){
+				var parser=new DOMParser();
+				parsed = parser.parseFromString(text, "text/xml");
+			}else{
+				parsed  = new ActiveXObject("Microsoft.XMLDOM");
+				parsed.async = false;
+				parsed.loadXML(text); 
+			} 
+		}catch(e){
+			
+		}
+		
+		return parsed;
+	}
+	
+	function dataParse(obj){
+		var parsedData = obj.data;
+		if(typeTest.isProperty(obj.obj, "handleAs")){
+			if(obj.obj.handleAs == "json"){
+				var parsedData = jsonParse(obj.data);
+			}else if(obj.obj.handleAs == "xml"){
+				var parsedData = xmlParse(obj.data);
+			}
+		}
+		
+		return parsedData;
+	}
+	
+	function rejectDeferred(obj, e){
+		if(typeTest.isString(e)){
+			e = {
+				"message": e,
+				"src": obj.url
+			};
+		}
+		if(typeTest.isProperty(obj, "onError")){
+			obj.onError(e);
+		}
+		obj.deferred.reject(e);
 	}
 	
 	function checkDataQueue(){
@@ -286,8 +332,13 @@ define([
 			if(dataQueue.length > 0){
 				var obj = dataQueue.shift();
 				if(!typeTest.isObject(obj.data)){
-					var parsedData = jsonParse(obj.data);
-					xhrSuccess(parsedData, obj.obj);
+					var parsedData = dataParse(obj);
+					
+					if(parsedData !== null){
+						xhrSuccess(parsedData, obj.obj);
+					}else{
+						rejectDeferred(obj.obj, "Failed to parse returned data");
+					}
 				}else{
 					xhrSuccess(obj.data, obj.obj);
 				}
@@ -338,9 +389,18 @@ define([
 					}else{
 						queue.push(obj);
 					}
+					
+					return obj.deferred;
 				}
 			}catch(e){
-				console.info("Could not add: "+url+", to the queue.");
+				var obj = new Deferred();
+				interval.add(function(){
+					// Hack to ensure it is ran after the return;
+					interval.add(function(){
+						rejectDeferred(obj.obj, "Could not add: "+url+", to the queue.");
+					});
+				});
+				return obj;
 			}
 		}
 	};
