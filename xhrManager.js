@@ -138,23 +138,26 @@ define([
 		var obj = null;
 		
 		try{
-			if(args.length === 1){
-				obj = args[0];
-			}else{
+			if(args.length > 0){
+				if(typeTest.isObject(args[0])){
+					obj = args[0];
+				}else{
+					obj = {
+						"url": args[0]
+					};
+				}
+			}
+			if(args.length > 1){
 				if(args.length > 1){
-					if(typeTest.isObject(args[0])){
-						obj = args[0];
-					}else{
-						obj = {
-							"url": args[0]
-						};
+					if(typeTest.isFunction(args[1])){
+						obj.success = args[1];
+					}else if(typeTest.isString(args[1])){
+						obj.errorMsg = args[2];
 					}
-					obj.success = args[1];
-					
 				}
-				if(args.length > 2){
-					obj.errorMsg = args[2];
-				}
+			}
+			if(args.length > 2){
+				obj.errorMsg = args[2];
 			}
 		}catch(e){
 			console.info("Could not parse initilization parameters.");
