@@ -65,6 +65,16 @@ define([
 					},
 					function(e){
 						xhrError(obj, e);
+					},
+					function(progress){
+						if(isWorker){
+							worker.sendMessage("progressXhr", {
+								"hash": obj.hash,
+								"message": progress
+							});
+						}else{
+							obj.deferred.progress(progress);
+						}
 					}
 				);
 			}else{
@@ -188,10 +198,21 @@ define([
 			
 			if(xhrAttemptsLookup[obj.hash] > 0){
 				xhrAttemptsLookup[obj.hash]--;
+				var progressMsg = "Failed to load: " + obj.url + ", will try again.";
+				if(isWorker){
+					worker.sendMessage("progressXhr", {
+						"hash": obj.hash,
+						"message": progressMsg
+					});
+				}else{
+					obj.deferred.progress(progressMsg);
+				}
 				queue.push(obj);
 			}else{
 				if(isWorker){
-					console.info(obj.errorMsg);
+					worker.sendMessage("notGotXhr", {
+						"hash": obj.hash
+					});
 				}else{
 					rejectDeferred(obj, e);
 				}
@@ -225,6 +246,8 @@ define([
 						"src":"simpo/xhrManager/worker"
 					});
 					on(worker, "gotXhr", onGotXhr);
+					on(worker, "notGotXhr", onNotGotXhr);
+					on(worker, "progressXhr", onProgressXhr);
 					reCallQueue();
 					ready = true;
 					interval.add(checkDataQueue, true, 1);
@@ -249,6 +272,43 @@ define([
 						data,
 						workerQueue[hash]
 					);
+				}else{
+					console.info("Worker returned data that could not be linked to a request.");
+				}
+			}
+		}catch(e){
+			console.info("Worker returned a message that could not be parsed.");
+		}
+	}
+	
+	function onNotGotXhr(message){
+		try{
+			var messageTemplate = {"message" : {"hash":""}};
+			if(typeTest.isProperty(message, messageTemplate)){
+				var hash = message.message.hash;
+				
+				if(typeTest.isProperty(workerQueue, hash)){
+					var obj = workerQueue[hash];
+					rejectDeferred(obj, obj.errorMsg);
+				}else{
+					console.info("Worker returned data that could not be linked to a request.");
+				}
+			}
+		}catch(e){
+			console.info("Worker returned a message that could not be parsed.");
+		}
+	}
+	
+	function onProgressXhr(message){
+		try{
+			var messageTemplate = {"message" : {"hash":"", "message":""}};
+			if(typeTest.isProperty(message, messageTemplate)){
+				var hash = message.message.hash;
+				
+				
+				if(typeTest.isProperty(workerQueue, hash)){
+					var obj = workerQueue[hash];
+					obj.deferred.progress(message.message.message);
 				}else{
 					console.info("Worker returned data that could not be linked to a request.");
 				}
@@ -363,6 +423,15 @@ define([
 		}
 	}
 	
+	function failedToAdd(){
+		interval.add(function(obj, url){
+			// Hack to ensure it is ran after a the return;
+			interval.add(function(){
+				rejectDeferred(obj, "Could not add: "+url+", to the queue.");
+			});
+		});
+	}
+	
 	var construct = {
 		set: function(propName, value){
 			try{
@@ -393,15 +462,12 @@ define([
 					return obj.deferred;
 				}
 			}catch(e){
-				var obj = new Deferred();
-				interval.add(function(){
-					// Hack to ensure it is ran after the return;
-					interval.add(function(){
-						rejectDeferred(obj.obj, "Could not add: "+url+", to the queue.");
-					});
-				});
-				return obj;
+				//
 			}
+			
+			var obj = new Deferred();
+			failedToAdd(obj, url);
+			return obj;
 		}
 	};
 	
