@@ -217,7 +217,7 @@ define([
 			"simpo/webworker",
 			"dojo/has"
 		], function(webworker, has){
-			/*if(has("webworker")){
+			if(has("webworker")){
 				try{
 					worker = new webworker({
 						"src":"simpo/xhrManager/worker"
@@ -229,9 +229,9 @@ define([
 				}catch(e){
 					console.info("Could not create webworker.");
 				}
-			}else{*/
+			}else{
 				ready = true;
-			//}
+			}
 		});
 	}
 	
