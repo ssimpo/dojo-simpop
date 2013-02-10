@@ -44,6 +44,7 @@ define([
 	var worker = ((isWorker) ? global.worker : null);
 	var ready = false;
 	var breakout = false;
+	var useWorker = true;
 
 	function decCounter(){
 		running--;
@@ -461,6 +462,8 @@ define([
 					limit = value;
 				}else if(propName === "attempts"){
 					attempts = value;
+				}else if(propName === "useWorker"){
+					useWorker = value;
 				}
 			}catch(e){
 				console.info("Could not add set the property, "+propName+", to: " + value.toString() + ".");
@@ -471,7 +474,7 @@ define([
 			try{
 				var obj = intConstructor(arguments);
 				if(obj !== null){
-					if((!isWorker) && (worker !== null)){
+					if((!isWorker) && (worker !== null) && (useWorker)){
 						var message = createPostMessage(obj);
 						workerQueue[obj.hash] = obj;
 						worker.sendMessage("getXhr", message);
