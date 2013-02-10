@@ -45,6 +45,7 @@ define([
 	var ready = false;
 	var breakout = false;
 	var useWorker = true;
+	var optionsParsers = new Array();
 
 	function decCounter(){
 		running--;
@@ -128,13 +129,17 @@ define([
 		try{
 			if(typeTest.isObject(obj)){
 				obj = lang.mixin({
-					"errorMsg": "Failed to load: " + obj.url,
 					"handleAs": "json",
 					"timeout": timeout,
 					"preventCache": true,
-					"hash": md5(obj.url),
 					"deferred": new Deferred()
 				}, obj);
+				
+				array.forEach(optionsParsers, function(parser){
+					obj = parser(obj);
+				});
+				obj.hash = md5(obj.url);
+				obj.errorMsg = "Failed to load: " + obj.url;
 			
 				if(typeTest.isProperty(obj, "hitch")){
 					if(typeTest.isProperty(obj, "success")){
@@ -166,12 +171,12 @@ define([
 				}
 			}
 			if(args.length > 1){
-				if(args.length > 1){
-					if(typeTest.isFunction(args[1])){
-						obj.success = args[1];
-					}else if(typeTest.isString(args[1])){
-						obj.errorMsg = args[2];
-					}
+				if(typeTest.isFunction(args[1])){
+					obj.success = args[1];
+				}else if(typeTest.isString(args[1])){
+					obj.errorMsg = args[2];
+				}else if(typeTest.isObject(args[1])){
+					obj = lang.mixin(args[1], obj);
 				}
 			}
 			if(args.length > 2){
@@ -454,6 +459,10 @@ define([
 	}
 	
 	var construct = {
+		addOptionsParser: function(func){
+			optionsParsers.push(func);
+		},
+		
 		set: function(propName, value){
 			try{
 				if(propName === "timeout"){
@@ -473,6 +482,7 @@ define([
 		add: function(url, success, errorMsg){
 			try{
 				var obj = intConstructor(arguments);
+				
 				if(obj !== null){
 					if((!isWorker) && (worker !== null) && (useWorker)){
 						var message = createPostMessage(obj);
