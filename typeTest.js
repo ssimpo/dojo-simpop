@@ -72,29 +72,48 @@ define([
 		},
 		
 		isEqual: function(value1, value2){
-			function isString(value){
-				return (Object.prototype.toString.call(value) === '[object String]');
-			}
-			
-			if(value1 === value2){
+			if((construct.isString(value1)) && (construct.isString(value2))){
+				return (construct._isEqualStrings(value1, value2));
+			}else if((construct.isObject(value1)) && (construct.isObject(value2))){
+				return construct._isEqualObjects(value1, value2);
+			}else if(value1 === value2){
 				return true;
-			}else if((isString(value1)) && (isString(value2))){
-				return (lang.trim(value1.toLowerCase()) == lang.trim(value2.toLowerCase()));
 			}
 			
 			return false;
 		},
 		
-		isArray: function(value){
-			return (Object.prototype.toString.call(value) === '[object Array]');
+		_isEqualStrings: function(value1, value2){
+			return (lang.trim(value1.toLowerCase()) == lang.trim(value2.toLowerCase()));
 		},
 		
-		_isBlankArray: function(ary){
-			if(ary.length == 0){
-				return true;
-			}else{
-				for(var i = 0; i < ary.length; i++){
-					if(!construct.isBlank(ary[i])){
+		_isEqualObjects: function(obj1, obj2){
+			for(var key in obj1){
+				if(!construct.isProperty(key, obj2)){
+					return false;
+				}
+			}
+			for(var key in obj2){
+				if(!construct.isProperty(key, obj1)){
+					return false;
+				}
+			}
+			
+			for(var key in obj1){
+				if(obj1[key]){
+					if(construct.isObject(obj1[key])){
+						if(!construct._isEqualObjects(obj1[key], obj2[key])){
+							return false;
+						}
+					}else if(construct.isFunction(obj1[key])){
+						if((typeof(obj2[key]) == 'undefined') || (obj1[key].toString() != obj2[key].toString())){
+							return false;
+						}
+					}else if (obj1[key] !== obj2[key]){
+						return false;
+					}
+				}else{
+					if(obj2[key]){
 						return false;
 					}
 				}
@@ -103,13 +122,8 @@ define([
 			return true;
 		},
 		
-		_isBlankObject: function(obj){
-			for(var key in obj){
-				if(construct.isProperty(obj, key)){
-					return false;
-				}
-			}
-			return true;
+		isArray: function(value){
+			return (Object.prototype.toString.call(value) === '[object Array]');
 		},
 		
 		isEmpty: function(value){
@@ -145,6 +159,29 @@ define([
 			return false;
 		},
 		
+		_isBlankArray: function(ary){
+			if(ary.length == 0){
+				return true;
+			}else{
+				for(var i = 0; i < ary.length; i++){
+					if(!construct.isBlank(ary[i])){
+						return false;
+					}
+				}
+			}
+			
+			return true;
+		},
+		
+		_isBlankObject: function(obj){
+			for(var key in obj){
+				if(construct.isProperty(obj, key)){
+					return false;
+				}
+			}
+			return true;
+		},
+		
 		isObject: function(value){
 			return construct.isType(value, "object");
 		},
@@ -167,9 +204,9 @@ define([
 		
 		isType: function(value, type){
 			return (
-				construct.isEqual(Object.prototype.toString.call(value), "[object "+type+"]")
+				construct._isEqualStrings(Object.prototype.toString.call(value), "[object "+type+"]")
 				||
-				construct.isEqual(typeof value, type)
+				construct._isEqualStrings(typeof value, type)
 			);
 		},
 		
