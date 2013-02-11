@@ -138,7 +138,7 @@ define([
 				if(!funcObj.deferred.isCanceled()){
 					try{
 						funcObj.execute();
-						funcObj.deferred.resolved({
+						funcObj.deferred.resolve({
 							"status": construct.INTERVALRAN
 						});
 					}catch(e){
