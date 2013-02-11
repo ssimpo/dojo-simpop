@@ -98,60 +98,70 @@ define([
 		
 		try{
 			incCounter();
-			
-			var cancelled = new Array();
-			array.forEach(functionList, function(funcObj, n){
-				var cCounter = (counter - funcObj.warp);
-				if(cCounter <= 0){
-					cCounter = (counterMax - cCounter);
-				}
-				
-				if(!funcObj.deferred.isCanceled()){
-					if((cCounter % funcObj.frequency) == 0){
-						try{
-							funcObj.execute();
-							funcObj.deferred.progress({
-								"status": construct.INTERVALRAN
-							});
-						}catch(e){
-							funcObj.deferred.progress({
-								"status": construct.INTERVALFAILED,
-								"error": e
-							});
-						}
-					}
-				}else{
-					cancelled.push(n);
-				}
-			}, this);
-			
-			array.forEach(cancelled, function(n){
-				functionList.splice(n, 1);
-			}, this);
-			
-			if(functionQueue.length > 0){
-				var funcObj = functionQueue.shift();
-				while((functionQueue.length > 0) || (funcObj.deferred.isCanceled())){
-					funcObj = functionQueue.shift();
-				}
-				
-				if(!funcObj.deferred.isCanceled()){
-					try{
-						funcObj.execute();
-						funcObj.deferred.resolve({
-							"status": construct.INTERVALRAN
-						});
-					}catch(e){
-						funcObj.deferred.reject({
-							"status": construct.INTERVALFAILED,
-							"error": e
-						});
-					}
-				}
-			}
+			runIntervalLoop();
+			runIntervalQueue();
 		}catch(e){
 			console.info("Could not run the interval functions.");
 		}
+	}
+	
+	function runIntervalQueue(){
+		if(functionQueue.length > 0){
+			var funcObj = functionQueue.shift();
+			while((functionQueue.length > 0) || (funcObj.deferred.isCanceled())){
+				funcObj = functionQueue.shift();
+			}
+			runIntervalFunction(funcObj, false);
+		}
+	}
+	
+	function runIntervalLoop(){
+		removeCancelled();
+		array.forEach(functionList, function(funcObj, n){
+			var cCounter = (counter - funcObj.warp);
+			if(cCounter <= 0){
+				cCounter = (counterMax - cCounter);
+			}
+				
+			if((cCounter % funcObj.frequency) == 0){
+				runIntervalFunction(funcObj, true);
+			}
+		}, this);
+	}
+	
+	function removeCancelled(){
+		var cancelled = new Array();
+		array.forEach(functionList, function(funcObj, n){
+			if(funcObj.deferred.isCanceled()){
+				cancelled.push(n);
+			}
+		});
+		
+		array.forEach(cancelled, function(n){
+			functionList.splice(n, 1);
+		}, this);
+	}
+	
+	function runIntervalFunction(funcObj, progress){
+		progress = ((progress) ? "progress": "resolve");
+		
+		if(!funcObj.deferred.isCanceled()){
+			try{
+				funcObj.execute();
+				funcObj.deferred[progress]({
+					"status": construct.INTERVALRAN
+				});
+			
+				return true;
+			}catch(e){
+				funcObj.deferred.reject({
+					"status": construct.INTERVALFAILED,
+					"error": e
+				});
+			}
+		}
+		
+		return false;
 	}
 	
 	function rndInt(min, max) {
