@@ -55,8 +55,10 @@ define([
 		_centre: function(lat, lng){
 			if(typeTest.isString(lat)){
 				this._postcodeLookup(lat, lang.hitch(this, function(lat, lng){
-					var latLng = new google.maps.LatLng(lat, lng);
-					this.map.panTo(latLng);
+					if(lat !== null){
+						var latLng = new google.maps.LatLng(lat, lng);
+						this.map.panTo(latLng);
+					}
 				}));
 			}else if(typeTest.isArray(lat)){
 				this._postcodeLookup(lat, lang.hitch(this, function(lat, lng){
@@ -147,10 +149,14 @@ define([
 				"address": postcode,
 				"region": "GB"
 			}, function(result){
-				callback(
-					result[0].geometry.location.Ya,
-					result[0].geometry.location.Za
-				);
+				if(!typeTest.isBlank(result)){
+					callback(
+						result[0].geometry.location.Ya,
+						result[0].geometry.location.Za
+					);
+				}else{
+					callback(null);
+				}
 			});
 		},
 		
