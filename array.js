@@ -18,9 +18,6 @@ define([
 	
 	var construct = {
 		forEach: function(ary, chunkSize, func, callback, thisObj){
-			var chunks = construct._chunkArray(ary, chunkSize);
-			var promises = new Array();
-			
 			if((thisObj === undefined) || (thisObj === null)){
 				if((callback !== undefined) && (callback !== null) && (!typeTest.isFunction(callback))){
 					thisObj = callback;
@@ -34,6 +31,14 @@ define([
 				}
 			}
 			
+			return construct._forEach(ary, chunkSize, func, callback, thisObj);
+		},
+		
+		_forEach: function(ary, chunkSize, func, callback, thisObj){
+			var chunks = construct._chunkArray(ary, chunkSize);
+			var promises = new Array();
+			
+			interval.stop();
 			if(chunks.length > 0){
 				array.forEach(chunks, function(chunk, n){
 					promises.push(interval.add(function(){
@@ -46,6 +51,7 @@ define([
 					}));
 				});
 			}
+			interval.start();
 			
 			return promiseAll(promises);
 		},
