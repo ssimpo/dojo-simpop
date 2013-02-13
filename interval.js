@@ -106,12 +106,19 @@ define([
 	}
 	
 	function runIntervalQueue(){
+		//console.log("Q", functionQueue.length);
 		if(functionQueue.length > 0){
 			var funcObj = functionQueue.shift();
-			while((functionQueue.length > 0) || (funcObj.deferred.isCanceled())){
+			while(funcObj.deferred.isCanceled()){
+				if(functionQueue.length <= 0){
+					break;
+				}
 				funcObj = functionQueue.shift();
 			}
-			runIntervalFunction(funcObj, false);
+			if(!funcObj.deferred.isCanceled()){
+				runIntervalFunction(funcObj, false);
+			}
+			
 		}
 	}
 	
