@@ -8,37 +8,46 @@ define([
 	"dojo/_base/declare",
 	"dojo/_base/array",
 	"dojo/_base/lang",
-	"simpo/interval"
+	"simpo/interval",
+	"dojo/promise/all",
+	"simpo/typeTest"
 ], function(
-	declare, array, lang, interval
+	declare, array, lang, interval, promiseAll, typeTest
 ) {
 	"use strict";
 	
 	var construct = {
 		forEach: function(ary, chunkSize, func, callback, thisObj){
 			var chunks = construct._chunkArray(ary, chunkSize);
+			var promises = new Array();
+			
+			if((thisObj === undefined) || (thisObj === null)){
+				if((callback !== undefined) && (callback !== null) && (!typeTest.isFunction(callback))){
+					thisObj = callback;
+					callback = undefined;
+				}
+			}
 			if((thisObj !== undefined) && (thisObj !== null)){
 				func = lang.hitch(thisObj, func);
 				if(callback !== undefined){
 					callback = lang.hitch(thisObj, callback);
 				}
 			}
+			
 			if(chunks.length > 0){
 				array.forEach(chunks, function(chunk, n){
-					interval.add(function(){
+					promises.push(interval.add(function(){
 						array.forEach(chunk, func);
 						if(callback !== undefined){
 							if(n == (chunks.length - 1)){
 								callback();
 							}
 						}
-					});
+					}));
 				});
-			}else{
-				if(callback !== undefined){
-					callback();
-				}
 			}
+			
+			return promiseAll(promises);
 		},
 		
 		_chunkArray: function(ary, chunkSize){
