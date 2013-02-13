@@ -8,9 +8,10 @@
 define([
 	"dojo/_base/declare",
 	"dojo/_base/array",
-	"dojo/Deferred"
+	"dojo/Deferred",
+	"simpo/typeTest"
 ], function(
-	declare, array, Deferred
+	declare, array, Deferred, typeTest
 ) {
 	"use strict";
 	
@@ -22,13 +23,14 @@ define([
 	var functionList = new Array();
 	var counter = 0;
 	var counterMax = 12;
+	var locks = new Object();
 	
 	function initInterval(){
 		// summary:
 		//		Start running the intervals.
 		
 		try{
-			if(intervalFunction === null){
+			if((intervalFunction === null) && (typeTest.isBlank(locks))){
 				intervalFunction = setInterval(interval, _period);
 			}
 		}catch(e){
@@ -260,6 +262,35 @@ define([
 			//		Start running the intervals.
 			
 			initInterval();
+		},
+		
+		lock: function(){
+			// summary:
+			//		
+			// description
+			//
+			
+			var lockId = rndInt(0, 1000000000);
+			var lock = {
+				unlock: function(){
+					if(typeTest.isProperty(locks, lockId)){
+						delete locks[lockId];
+					}
+				},
+				stop: function(){
+					lock.lock();
+					construct.stop();
+				},
+				start: function(){
+					lock.unlock();
+					construct.start();
+				},
+				lock: function(){
+					locks[lockId] = true;
+				}
+			};
+			
+			return lock;
 		}
 	};
 	
