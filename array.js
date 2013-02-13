@@ -38,7 +38,8 @@ define([
 			var chunks = construct._chunkArray(ary, chunkSize);
 			var promises = new Array();
 			
-			interval.stop();
+			var lock = interval.lock();
+			lock.stop();
 			if(chunks.length > 0){
 				array.forEach(chunks, function(chunk, n){
 					promises.push(interval.add(function(){
@@ -51,7 +52,7 @@ define([
 					}));
 				});
 			}
-			interval.start();
+			lock.start();
 			
 			return promiseAll(promises);
 		},
