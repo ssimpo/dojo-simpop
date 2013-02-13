@@ -216,7 +216,7 @@ define([
 		
 		isProperty: function(value, propName){
 			if(construct.isObject(value)){
-				if(construct.isString(propName)){
+				if(construct.isString(propName) || construct.isNumber(propName)){
 					return ((Object.prototype.hasOwnProperty.call(value, propName)) || (propName in value));
 				}else if(construct.isArray(propName)){
 					var allFound = true;
