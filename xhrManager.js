@@ -21,7 +21,7 @@ define([
 	array, typeTest, Deferred
 ) {
 	"use strict";
-	
+
 	function workerTest(){
 		try {
 			var test = (!document && !window);
@@ -351,7 +351,7 @@ define([
 			console.info("Could not push worker result to the data queue.");
 		}
 	}
-	
+
 	function jsonParse(txt){
 		var parsed = null;
 		
@@ -361,7 +361,7 @@ define([
 			try{
 				parsed = JSON2(txt);
 			}catch(e){
-				
+				//
 			}
 		}
 		
