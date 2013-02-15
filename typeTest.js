@@ -122,54 +122,70 @@ define([
 		
 	}
 	
+	function inArray(value, ary, pure){
+		pure = ((pure === undefined) ? false : pure);
+		var stringValue = value;
+		
+		if(!pure){
+			try{
+				stringValue = value.toString();
+			}catch(e){}
+		}
+		
+		for(var i = 0; i < ary.length; i++){
+			if(pure){
+				if(value === ary[i]){
+					return true;
+				}
+			}else{
+				if(construct.isEqual(stringValue, ary[i])){
+					return true;
+				}
+			}
+		}
+			
+		return false;
+	}
+	
+	function removeWhitespace(value, convert){
+		convert = ((convert === undefined) ? false : convert);
+		
+		if(construct.isString(value)){
+			return value.replace(/\s/g, "");
+		}else if(convert){
+			try{
+				var stringValue = value.toString().replace(/\s/g, "");
+				return stringValue
+			}catch(e){ }
+		}
+		
+		return value;
+	}
+	
+	function isBlankType(value){
+		value = removeWhitespace(value);
+		
+		return (inArray(value, [null, undefined, false, 0, ""], true) || (construct.isType(value, "nan")));
+	}
+	
 	var construct = {
 		"_trueValues": ["yes", "true", "on", "checked", "ticked", "1"],
 		"_falseValues": ["no", "false", "off", "unchecked", "unticked", "0"],
 		
 		isTrue: function(value){
-			if(value === true){
-				return true;
-			}
-			if(value === 1){
+			if((value === true) || (value === 1)){
 				return true;
 			}
 			
-			try{
-				var stringValue = value.toString();
-				for(var i = 0; i < construct._trueValues.length; i++){
-					if(this.isEqual(stringValue, construct._trueValues[i])){
-						return true;
-					}
-				}
-			}catch(e){
-				return false;
-			}
-			
-			return false;
+			return inArray(value, construct._trueValues);
 		},
 		
 		isFalse: function(value){
-			if(value === false){
+			if(isBlankType(value)){
 				return true;
-			}
-			if(value === 0){
-				return true;
-			}
-			if(this.isBlank(value)){
-				return true;
-			}
-			try{
-				var stringValue = value.toString();
-				for(var i = 0; i < construct._falseValues.length; i++){
-					if(this.isEqual(stringValue, construct._falseValues[i])){
-						return true;
-					}
-				}
-			}catch(e){
-				return false;
 			}
 			
-			return false;
+			return inArray(value, construct._falseValues);
 		},
 		
 		isEqual: function(value1, value2){
@@ -183,21 +199,13 @@ define([
 				}else if(value1 === value2){
 					return true;
 				}else{
-					try{
-						if(Object.prototype.toString.call(value1) === Object.prototype.toString.call(value2)){
-							value1 = value1.toString().replace(/\s/g,"");
-							value2 = value2.toString().replace(/\s/g,"");
-							return (value1 === value2);
-						}
-					}catch(e){}
+					if(Object.prototype.toString.call(value1) === Object.prototype.toString.call(value2)){
+						return (removeWhitespace(value1, true) === removeWhitespace(value2, true));
+					}
 				}
 			}
 			
 			return false;
-		},
-		
-		isArray: function(value){
-			return (Object.prototype.toString.call(value) === '[object Array]');
 		},
 		
 		isEmpty: function(value){
@@ -211,17 +219,7 @@ define([
 		},
 		
 		isBlank: function(value){
-			var stringConverted = "";
-			try{
-				if(!construct.isString(value)){
-					stringConverted = value.toString().toLowerCase();
-				}
-			}catch(e){}
-			
-			if((value === null) || (value === undefined) || (value === "") || (value === false) || (value === 0) || (stringConverted == "nan")){
-				return true;
-			}
-			if(typeof value == "undefined"){
+			if(isBlankType(value)){
 				return true;
 			}
 			
@@ -253,6 +251,14 @@ define([
 			}
 			
 			return false;
+		},
+		
+		isArray: function(value){
+			return construct.isType(value, "array");
+		},
+		
+		isArrayBuffer: function(value){
+			return construct.isType(value, "arrayBuffer");
 		},
 		
 		isNumber: function(value){
@@ -303,10 +309,6 @@ define([
 				||
 				isEqualStrings(typeof value, type)
 			);
-		},
-		
-		isArrayBuffer: function(value){
-			return construct.isType(value, "arrayBuffer");
 		},
 		
 		isProperty: function(value, propName){

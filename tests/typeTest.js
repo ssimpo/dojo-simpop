@@ -218,8 +218,10 @@ define([
 			doh.assertTrue(typeTest.isTrue("checked"));
 			doh.assertTrue(typeTest.isTrue("ticked"));
 			doh.assertTrue(typeTest.isTrue(1));
+			doh.assertTrue(typeTest.isTrue(1.0));
 			doh.assertFalse(typeTest.isTrue(1.1));
 			doh.assertTrue(typeTest.isTrue("1"));
+			doh.assertTrue(typeTest.isTrue("1.0"));
 			doh.assertFalse(typeTest.isTrue("unticked"));
 		}
 	}, {
@@ -245,6 +247,8 @@ define([
 			doh.assertTrue(typeTest.isFalse(null));
 			doh.assertTrue(typeTest.isFalse(undefined));
 			doh.assertTrue(typeTest.isFalse(NaN));
+			doh.assertFalse(typeTest.isFalse([]));
+			doh.assertFalse(typeTest.isFalse({}));
 		}
 	}, {
 		"name": "isBlankTest",
