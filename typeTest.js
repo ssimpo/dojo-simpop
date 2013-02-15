@@ -6,9 +6,10 @@
 //		Stephen Simpson <me@simpo.org>, <http://simpo.org>
 define([
 	"dojo/_base/array",
-	"dojo/_base/lang"
+	"dojo/_base/lang",
+	"dojo/dom-attr"
 ], function(
-	array, lang
+	array, lang, domAttr
 ){
 	"use strict";
 	
@@ -19,6 +20,106 @@ define([
 		});
 	}catch(e){
 		// Probably in a WebWorker or NodeJs
+	}
+	
+	function isPrototypeType(value, type){
+		return isEqualStrings(Object.prototype.toString.call(value), "[object "+type+"]");
+	}
+	
+	function capitaliseFirstLetter(txt){
+		return txt.charAt(0).toUpperCase() + txt.slice(1);
+	}
+	
+	function isEqualStrings(value1, value2){
+		return (lang.trim(value1.toLowerCase()) == lang.trim(value2.toLowerCase()));
+	}
+	
+	function isEqualObjects(obj1, obj2){
+		for(var key in obj1){
+			if(!construct.isProperty(key, obj2)){
+				return false;
+			}
+		}
+		for(var key in obj2){
+			if(!construct.isProperty(key, obj1)){
+				return false;
+			}
+		}
+			
+		for(var key in obj1){
+			if(obj1[key]){
+				if(construct.isObject(obj1[key])){
+					if(!isEqualObjects(obj1[key], obj2[key])){
+						return false;
+					}
+				}else if(construct.isFunction(obj1[key])){
+					if((typeof(obj2[key]) == 'undefined') || (obj1[key].toString() != obj2[key].toString())){
+						return false;
+					}
+				}else if (obj1[key] !== obj2[key]){
+					return false;
+				}
+			}else{
+				if(obj2[key]){
+					return false;
+				}
+			}
+		}
+			
+		return true;
+	}
+	
+	function isBlankArray(ary){
+		if(ary.length == 0){
+			return true;
+		}else{
+			for(var i = 0; i < ary.length; i++){
+				if(!construct.isBlank(ary[i])){
+					return false;
+				}
+			}
+		}
+			
+		return true;
+	}
+	
+	function isBlankObject(obj){
+		for(var key in obj){
+			if(construct.isProperty(obj, key)){
+				if(!construct.isBlank(key)){
+					return false;
+				}else if(!construct.isBlank(obj[key])){
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+	
+	function isEmptyObject(obj){
+		for(var key in obj){
+			if(construct.isProperty(obj, key)){
+				return false;
+			}
+		}
+		return true;
+	}
+	
+	function convertToNumber(value){
+		try{
+			var temp = value.toString();
+			if(temp.indexOf(".") === -1){
+				temp = parseInt(temp, 10);
+			}else{
+				temp = parseFloat(temp);
+			}
+			
+			return temp;
+		}catch(e){
+			return value;
+		}
+		
+		
 	}
 	
 	var construct = {
@@ -54,7 +155,7 @@ define([
 			if(value === 0){
 				return true;
 			}
-			if(this._isBlank(value)){
+			if(this.isBlank(value)){
 				return true;
 			}
 			try{
@@ -72,54 +173,26 @@ define([
 		},
 		
 		isEqual: function(value1, value2){
-			if((construct.isString(value1)) && (construct.isString(value2))){
-				return (construct._isEqualStrings(value1, value2));
-			}else if((construct.isObject(value1)) && (construct.isObject(value2))){
-				return construct._isEqualObjects(value1, value2);
-			}else if(value1 === value2){
-				return true;
+			if(!isNaN(value1) && !isNaN(value2)){
+				return (convertToNumber(value1) == convertToNumber(value2));
+			}else{
+				if((construct.isString(value1)) && (construct.isString(value2))){
+					return (isEqualStrings(value1, value2));
+				}else if((construct.isType(value1, "object")) && (construct.isType(value2, "object"))){
+					return isEqualObjects(value1, value2);
+				}else if(value1 === value2){
+					return true;
+				}else{
+					try{
+						value1 = value1.toString().replace(/\s/g,"");
+						value2 = value2.toString().replace(/\s/g,"");
+						
+						return (value1 === value2);
+					}catch(e){}
+				}
 			}
 			
 			return false;
-		},
-		
-		_isEqualStrings: function(value1, value2){
-			return (lang.trim(value1.toLowerCase()) == lang.trim(value2.toLowerCase()));
-		},
-		
-		_isEqualObjects: function(obj1, obj2){
-			for(var key in obj1){
-				if(!construct.isProperty(key, obj2)){
-					return false;
-				}
-			}
-			for(var key in obj2){
-				if(!construct.isProperty(key, obj1)){
-					return false;
-				}
-			}
-			
-			for(var key in obj1){
-				if(obj1[key]){
-					if(construct.isObject(obj1[key])){
-						if(!construct._isEqualObjects(obj1[key], obj2[key])){
-							return false;
-						}
-					}else if(construct.isFunction(obj1[key])){
-						if((typeof(obj2[key]) == 'undefined') || (obj1[key].toString() != obj2[key].toString())){
-							return false;
-						}
-					}else if (obj1[key] !== obj2[key]){
-						return false;
-					}
-				}else{
-					if(obj2[key]){
-						return false;
-					}
-				}
-			}
-			
-			return true;
 		},
 		
 		isArray: function(value){
@@ -128,16 +201,21 @@ define([
 		
 		isEmpty: function(value){
 			if(construct.isArray(value)){
-				return construct._isBlankArray(value);
+				return (value.length <= 0);
 			}else if(construct.isObject(value)){
-				return construct._isBlankObject(value);
+				return isEmptyObject(value);
 			}
 			
 			return false;
 		},
 		
 		isBlank: function(value){
-			if((value === null) || (value === undefined) || (value === "") || (value === false) || (value === 0)){
+			var stringConverted = "";
+			try{
+				stringConverted = value.toString().toLowerCase();
+			}catch(e){}
+			
+			if((value === null) || (value === undefined) || (value === "") || (value === false) || (value === 0) || (stringConverted == "nan")){
 				return true;
 			}
 			if(typeof value == "undefined"){
@@ -147,47 +225,35 @@ define([
 			if(construct.isString(value)){
 				return (lang.trim(value.replace(/\&nbsp\;/g," ")) === "");
 			}else if(construct.isArray(value)){
-				return construct.isEmpty(value);
-			}else if(construct.isObject(value)){
+				return isBlankArray(value);
+			}else if(construct.isType(value, "object")){
 				if(construct.isElement(value)){
 					return construct.isBlank(domAttr.get(value, "innerHTML"));
+				}if(construct.isWidget(value)){
+					try{
+						value = value.get("value");
+						return construct.isBlank(value);
+					}catch(e){
+						return false;
+					}
 				}else{
-					return construct.isEmpty(value);
+					return isBlankObject(value);
 				}
 			}
 			
 			return false;
 		},
 		
-		_isBlankArray: function(ary){
-			if(ary.length == 0){
-				return true;
-			}else{
-				for(var i = 0; i < ary.length; i++){
-					if(!construct.isBlank(ary[i])){
-						return false;
-					}
-				}
-			}
-			
-			return true;
-		},
-		
-		_isBlankObject: function(obj){
-			for(var key in obj){
-				if(construct.isProperty(obj, key)){
-					return false;
-				}
-			}
-			return true;
-		},
-		
 		isObject: function(value){
-			return construct.isType(value, "object");
+			return isPrototypeType(value, "object");
 		},
 		
 		isNumber: function(value){
-			return construct.isType(value, "number");
+			try{
+				return (construct.isType(value, "number") && (!isNaN(value)));
+			}catch(e){
+				return false;
+			}
 		},
 		
 		isString: function(value){
@@ -204,9 +270,9 @@ define([
 		
 		isType: function(value, type){
 			return (
-				construct._isEqualStrings(Object.prototype.toString.call(value), "[object "+type+"]")
+				isPrototypeType(value, type)
 				||
-				construct._isEqualStrings(typeof value, type)
+				isEqualStrings(typeof value, type)
 			);
 		},
 		
@@ -215,7 +281,7 @@ define([
 		},
 		
 		isProperty: function(value, propName){
-			if(construct.isObject(value)){
+			if(construct.isType(value, "object")){
 				if(construct.isString(propName) || construct.isNumber(propName)){
 					return ((Object.prototype.hasOwnProperty.call(value, propName)) || (propName in value));
 				}else if(construct.isArray(propName)){
@@ -237,7 +303,7 @@ define([
 							var subValue = value[key];
 							if(construct.isString(obj)){
 								if(obj !== ""){
-									var testFunc = construct["is" + construct._capitaliseFirstLetter(obj)];
+									var testFunc = construct["is" + capitaliseFirstLetter(obj)];
 									if(!construct.isType(subValue, obj)){
 										return false;
 									}
@@ -257,10 +323,6 @@ define([
 			}
 			
 			return false;
-		},
-		
-		_capitaliseFirstLetter: function(txt){
-			return txt.charAt(0).toUpperCase() + txt.slice(1);
 		},
 		
 		isFunction: function(value){
