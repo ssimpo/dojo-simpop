@@ -209,6 +209,7 @@ define([
 		"name": "isTrueTest",
 		"setUp": fixtures.blank,
 		"tearDown": tearDowns.blank,
+		"testWidget": new TextBox(),
 		"runTest": function(){
 			doh.assertTrue(typeTest.isTrue(true));
 			doh.assertFalse(typeTest.isTrue(false));
@@ -223,11 +224,15 @@ define([
 			doh.assertTrue(typeTest.isTrue("1"));
 			doh.assertTrue(typeTest.isTrue("1.0"));
 			doh.assertFalse(typeTest.isTrue("unticked"));
+			doh.assertFalse(typeTest.isTrue(this.testWidget));
+			this.testWidget.set("value","on");
+			doh.assertTrue(typeTest.isTrue(this.testWidget));
 		}
 	}, {
 		"name": "isFalseTest",
 		"setUp": fixtures.blank,
 		"tearDown": tearDowns.blank,
+		"testWidget": new TextBox(),
 		"runTest": function(){
 			doh.assertTrue(typeTest.isFalse(false));
 			doh.assertFalse(typeTest.isFalse(true));
@@ -247,8 +252,13 @@ define([
 			doh.assertTrue(typeTest.isFalse(null));
 			doh.assertTrue(typeTest.isFalse(undefined));
 			doh.assertTrue(typeTest.isFalse(NaN));
-			doh.assertFalse(typeTest.isFalse([]));
-			doh.assertFalse(typeTest.isFalse({}));
+			doh.assertTrue(typeTest.isFalse([]));
+			doh.assertTrue(typeTest.isFalse({}));
+			doh.assertFalse(typeTest.isFalse([""]));
+			doh.assertFalse(typeTest.isFalse({"":""}));
+			doh.assertFalse(typeTest.isFalse(this.testWidget));
+			this.testWidget.set("value","off");
+			doh.assertTrue(typeTest.isFalse(this.testWidget));
 		}
 	}, {
 		"name": "isBlankTest",
@@ -279,7 +289,7 @@ define([
 			domAttr.set(this.testElement, "innerHTML", "HELLO");
 			doh.assertFalse(typeTest.isBlank(this.testElement));
 			doh.assertTrue(typeTest.isBlank(this.testWidget));
-			this.testWidget.set("value","HELLO")
+			this.testWidget.set("value","HELLO");
 			doh.assertFalse(typeTest.isBlank(this.testWidget));
 		}
 	}, {
