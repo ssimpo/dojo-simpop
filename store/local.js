@@ -10,12 +10,14 @@ define([
 	"lib/aes",
 	"lib/md5",
 	"dojo/json",
+	"lib/jsonParse",
 	"dojo/sniff",
 	"simpo/array",
-	"simpo/interval"
+	"simpo/interval",
+	"simpo/typeTest"
 ], function(
-	declare, store, aspect, lang, lzw, aes, md5, JSON, sniff,
-	iarray, interval
+	declare, store, aspect, lang, lzw, aes, md5, JSON, JSON2, sniff,
+	iarray, interval, typeTest
 ){
 	"use strict";
 	
@@ -54,7 +56,7 @@ define([
 		
 		_init: function(args){
 			try{
-				if(this._isObject(args)){
+				if(typeTest.isObject(args)){
 					for(var key in args){
 						this[key] = args[key];
 					}
@@ -75,28 +77,41 @@ define([
 		_populate: function(){
 			var size = 0;
 			var items = 0;
+			var self = this;
+			
 			iarray.forEach(this._idCache, this._slicer, function(id){
-				var obj = this._getLocalObjectByKey(id);
-				if(this._isObject(obj)){
-					this._copyLocalObjectToMemory(obj);
-					var localObjString =this._localStore.getItem(id);
-					size += localObjString.length;
+				var jsonTxt = self._localStore.getItem(id);
+				var obj = self._parseLocalObject(id, jsonTxt);
+				
+				if(!typeTest.isEmpty(obj)){
+					self._copyLocalObjectToMemory(obj);
+					size += jsonTxt.length;
 					items++;
-					//this._copyMemoryObjectToLocal(obj);
 				}else{
-					this._localStore.removeItem(id);
+					self._localStore.removeItem(id);
 				}
-			}, function(){
-				var readyObj = {
+			}).then(function(){
+				self._checkAndRunReady({
 					"bubbles": false,
 					"cancelable": false,
-					"target": this,
+					"target": self,
 					"size": size,
 					"items": items
-				};
-				
-				this._checkAndRunReady(readyObj)
-			}, this);
+				})
+			});
+		},
+		
+		_getLocalObjectSize: function(id){
+			var size = 0;
+			
+			try{
+				var localObjString = self._localStore.getItem(id);
+				size = localObjString.length;
+			}catch(e){
+				console.info("Could not get size of local object: "+id);
+			}
+			
+			return size;
 		},
 		
 		_checkAndRunReady: function(readyObj){
@@ -118,9 +133,6 @@ define([
 			iarray.forEach(this._idCache, this._slicer, function(id){
 				var localObjString = self._localStore.getItem(id);
 				size += localObjString.length;
-				//var obj = this._uncompressAndDecrypt(localObjString);
-				//var jsonString = JSON.stringify(obj);
-				//uncompressedSize += jsonString.length;
 			}, function(){
 				callback(size, uncompressedSize);
 			});
@@ -282,10 +294,24 @@ define([
 			}
 		},
 		
+		_parseLocalObject: function(id, jsonTxt){
+			try{
+				var obj = this._jsonParse(jsonTxt);
+				if(typeTest.isObject(obj)){
+					obj.id = id;
+				}
+			
+				return obj;
+			}catch(e){
+				console.info("Could not parse local object text (ID="+id+")");
+				return {};
+			}
+		},
+		
 		_getLocalObjectByKey: function(id){
 			try{
 				var obj = this._jsonParse(this._localStore.getItem(id));
-				if(this._isObject(obj)){
+				if(typeTest.isObject(obj)){
 					obj.id = id;
 				}
 			
@@ -297,7 +323,7 @@ define([
 		},
 		
 		_jsonParse: function(value){
-			if((value === "")|(value === undefined)||(value === null)){
+			if(typeTest.isBlank(value)){
 				return "";
 			}
 			
@@ -308,7 +334,7 @@ define([
 				}
 			}catch(e){
 				try{
-					nValue = eval('(' + nValue + ')');
+					nValue = JSON2.parse(nValue);
 				}catch(e){
 					console.info("could JSON parse the supplied value.");
 					nValue = value;
@@ -343,7 +369,7 @@ define([
 		
 		_getStoreIdForObject: function(obj){
 			try{
-				if(this._isObject(obj)){
+				if(typeTest.isObject(obj)){
 					if(this.id != ""){
 						if(this._hasOwnProperty(obj,"_storeUNID")){
 							return obj._storeUNID;
@@ -355,10 +381,6 @@ define([
 			}
 			
 			return "";
-		},
-		
-		_isObject: function(obj){
-			return (Object.prototype.toString.call(obj) === '[object Object]');
 		},
 		
 		_localPut: function(orginalPut){
