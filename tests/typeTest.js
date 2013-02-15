@@ -40,6 +40,7 @@ define([
 			doh.assertFalse(typeTest.isString({}));
 			doh.assertFalse(typeTest.isString(undefined));
 			doh.assertFalse(typeTest.isString(null));
+			doh.assertFalse(typeTest.isString(NaN));
 		}
 	}, {
 		"name": "isNumberTest",
@@ -73,9 +74,9 @@ define([
 			doh.assertFalse(typeTest.isObject(""));
 			doh.assertFalse(typeTest.isObject(undefined));
 			doh.assertFalse(typeTest.isObject(null));
+			doh.assertFalse(typeTest.isObject(NaN));
 			doh.assertFalse(typeTest.isObject(new String()));
 			doh.assertFalse(typeTest.isObject(function(){}));
-			doh.assertFalse(typeTest.isObject(document));
 			doh.assertFalse(typeTest.isObject("object"));
 			doh.assertFalse(typeTest.isObject("Object"));
 		}
@@ -188,6 +189,9 @@ define([
 			doh.assertTrue(typeTest.isType(function(){}, "function"));
 			doh.assertTrue(typeTest.isType(1, "number"));
 			doh.assertTrue(typeTest.isType("", "string"));
+			doh.assertTrue(typeTest.isType(null, "null"));
+			doh.assertTrue(typeTest.isType(undefined, "undefined"));
+			doh.assertTrue(typeTest.isType(NaN, "nan"));
 		}
 	}, {
 		"name": "isFunctionTest",
@@ -214,6 +218,8 @@ define([
 			doh.assertTrue(typeTest.isTrue("checked"));
 			doh.assertTrue(typeTest.isTrue("ticked"));
 			doh.assertTrue(typeTest.isTrue(1));
+			doh.assertFalse(typeTest.isTrue(1.1));
+			doh.assertTrue(typeTest.isTrue("1"));
 			doh.assertFalse(typeTest.isTrue("unticked"));
 		}
 	}, {
@@ -229,7 +235,12 @@ define([
 			doh.assertTrue(typeTest.isFalse("unchecked"));
 			doh.assertTrue(typeTest.isFalse("unticked"));
 			doh.assertTrue(typeTest.isFalse(0));
+			doh.assertFalse(typeTest.isFalse(0.01));
+			doh.assertTrue(typeTest.isFalse("0"));
 			doh.assertFalse(typeTest.isFalse("ticked"));
+			doh.assertFalse(typeTest.isFalse("NaN"));
+			doh.assertFalse(typeTest.isFalse("null"));
+			doh.assertFalse(typeTest.isFalse("undefined"));
 			doh.assertTrue(typeTest.isFalse(""));
 			doh.assertTrue(typeTest.isFalse(null));
 			doh.assertTrue(typeTest.isFalse(undefined));
@@ -251,6 +262,9 @@ define([
 			doh.assertTrue(typeTest.isBlank({}));
 			doh.assertTrue(typeTest.isBlank([]));
 			doh.assertFalse(typeTest.isBlank("test"));
+			doh.assertFalse(typeTest.isBlank("null"));
+			doh.assertFalse(typeTest.isBlank("undefined"));
+			doh.assertFalse(typeTest.isBlank("NaN"));
 			doh.assertFalse(typeTest.isBlank({"test":""}));
 			doh.assertTrue(typeTest.isBlank({"":undefined}));
 			doh.assertFalse(typeTest.isBlank({"":"hello"}));
@@ -304,7 +318,7 @@ define([
 			doh.assertFalse(typeTest.isElement({}));
 		}
 	}, {
-		"name": "isNumberTest",
+		"name": "isEqualTest",
 		"setUp": fixtures.blank,
 		"tearDown": tearDowns.blank,
 		"runTest": function(){
@@ -321,9 +335,12 @@ define([
 			doh.assertTrue(typeTest.isEqual("  1.1",1.1));
 			doh.assertFalse(typeTest.isEqual("  1.1",1));
 			doh.assertTrue(typeTest.isEqual(undefined, undefined));
-			doh.assertFalse(typeTest.isEqual(undefined, null));
+			doh.assertFalse(typeTest.isEqual(undefined, "undefined"));
+			doh.assertFalse(typeTest.isEqual(undefined, null)); // FAIL IE
 			doh.assertTrue(typeTest.isEqual(null, null));
+			doh.assertFalse(typeTest.isEqual(null, "null"));
 			doh.assertTrue(typeTest.isEqual(NaN, NaN));
+			doh.assertFalse(typeTest.isEqual(NaN, "NaN"));
 			doh.assertFalse(typeTest.isEqual(NaN, null));
 			doh.assertTrue(typeTest.isEqual(
 				function(){var test = "hello"},
