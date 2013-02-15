@@ -175,14 +175,18 @@ define([
 		isTrue: function(value){
 			if((value === true) || (value === 1)){
 				return true;
+			}else if(construct.isWidget(value)){
+				value = value.get("value");
 			}
 			
 			return inArray(value, construct._trueValues);
 		},
 		
 		isFalse: function(value){
-			if(isBlankType(value)){
+			if(isBlankType(value) || construct.isEmpty(value)){
 				return true;
+			}else if(construct.isWidget(value)){
+				value = value.get("value");
 			}
 			
 			return inArray(value, construct._falseValues);
