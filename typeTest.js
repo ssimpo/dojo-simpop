@@ -184,10 +184,11 @@ define([
 					return true;
 				}else{
 					try{
-						value1 = value1.toString().replace(/\s/g,"");
-						value2 = value2.toString().replace(/\s/g,"");
-						
-						return (value1 === value2);
+						if(Object.prototype.toString.call(value1) === Object.prototype.toString.call(value2)){
+							value1 = value1.toString().replace(/\s/g,"");
+							value2 = value2.toString().replace(/\s/g,"");
+							return (value1 === value2);
+						}
 					}catch(e){}
 				}
 			}
@@ -212,7 +213,9 @@ define([
 		isBlank: function(value){
 			var stringConverted = "";
 			try{
-				stringConverted = value.toString().toLowerCase();
+				if(!construct.isString(value)){
+					stringConverted = value.toString().toLowerCase();
+				}
 			}catch(e){}
 			
 			if((value === null) || (value === undefined) || (value === "") || (value === false) || (value === 0) || (stringConverted == "nan")){
@@ -245,7 +248,11 @@ define([
 		},
 		
 		isObject: function(value){
-			return isPrototypeType(value, "object");
+			if((value !== undefined) && (value !== null)){
+				return isPrototypeType(value, "object");
+			}
+			
+			return false;
 		},
 		
 		isNumber: function(value){
@@ -269,6 +276,28 @@ define([
 		},
 		
 		isType: function(value, type){
+			if(isEqualStrings(type, "null") && (value === null)){
+				return true;
+			}else if(isEqualStrings(type, "object") && (value === null)){
+				return false
+			}
+			
+			if(isEqualStrings(type, "undefined") && (value === undefined)){
+				return true;
+			}else if(isEqualStrings(type, "object") && (value === undefined)){
+				return false
+			}
+			
+			try{
+				if(isEqualStrings(type, "nan")){
+					if(!construct.isString(value)){
+						if(isEqualStrings(type, value.toString())){
+							return true;
+						}
+					}
+				}
+			}catch(e){}
+			
 			return (
 				isPrototypeType(value, type)
 				||
