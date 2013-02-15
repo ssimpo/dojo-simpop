@@ -24,6 +24,7 @@ define([
 	var counter = 0;
 	var counterMax = 12;
 	var locks = new Object();
+	var endIntervalTime = new Date().getTime();
 	
 	function initInterval(){
 		// summary:
@@ -99,9 +100,13 @@ define([
 		//		Run an interval.
 		
 		try{
-			incCounter();
-			runIntervalLoop();
-			runIntervalQueue();
+			var elapsed = new Date().getTime() - endIntervalTime;
+			if(endIntervalTime > period){
+				incCounter();
+				runIntervalLoop();
+				runIntervalQueue();
+				endIntervalTime = new Date().getTime();
+			}
 		}catch(e){
 			console.info("Could not run the interval functions.");
 		}
