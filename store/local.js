@@ -14,12 +14,53 @@ define([
 	"dojo/sniff",
 	"simpo/array",
 	"simpo/interval",
-	"simpo/typeTest"
+	"simpo/typeTest",
+	"dojo/Deferred",
+	"dojo/_base/array"
 ], function(
 	declare, store, aspect, lang, lzw, aes, md5, JSON, JSON2, sniff,
-	iarray, interval, typeTest
+	iarray, interval, typeTest, Deferred, array
 ){
 	"use strict";
+	
+	var idCache = new Array();
+	var idCacheCallbacks = new Array();
+	var idCacheDone = false;
+	var idCacheRunning = false;
+	
+	function getIdArrayFromStorage(store){
+		try{
+			var ids = new Array();
+			for(var n = 0; n < store.length; n++){
+				ids.push(store.key(n));
+			}
+			return ids;
+		}catch(e){
+			console.info("Could not obtain an ID-array for the browser cache.");
+			return [];
+		}
+	}
+	
+	function populateIdCache(store){
+		var def = new Deferred();
+		idCacheCallbacks.push(def);
+		
+		if(!idCacheDone){
+			if(!idCacheRunning){
+				idCacheRunning = true;
+				idCache = getIdArrayFromStorage(store);
+				idCacheDone = true;
+				
+				array.forEach(idCacheCallbacks, function(def){
+					def.resolve(idCache);
+				});
+			}
+		}else{
+			def.resolve(idCache);
+		}
+		
+		return def; 
+	}
 	
 	var construct = declare([store], {
 		"id": "simpoStoreLocal",
@@ -70,25 +111,40 @@ define([
 		},
 		
 		_initPopulation: function(){
-			this._idCache = this._getIdArrayFromStorage();
-			this._populate();
+			populateIdCache(this._localStore).then(
+				lang.hitch(this, function(cache){
+					this._idCache = cache;
+					this._populate();
+				})
+			);
+		},
+		
+		_stringEndsWith: function(txt, suffix) {
+			return txt.indexOf(suffix, txt.length - suffix.length) !== -1;
 		},
 		
 		_populate: function(){
 			var size = 0;
 			var items = 0;
 			var self = this;
+			var counter = 0;
 			
 			iarray.forEach(this._idCache, this._slicer, function(id){
-				var jsonTxt = self._localStore.getItem(id);
-				var obj = self._parseLocalObject(id, jsonTxt);
+				try{
+					if(self._stringEndsWith(id, "_"+self.id)){
+						var jsonTxt = self._localStore.getItem(id);
+						var obj = self._parseLocalObject(id, jsonTxt);
 				
-				if(!typeTest.isEmpty(obj)){
-					self._copyLocalObjectToMemory(obj);
-					size += jsonTxt.length;
-					items++;
-				}else{
-					self._localStore.removeItem(id);
+						if(!typeTest.isEmpty(obj)){
+							self._copyLocalObjectToMemory(obj);
+							size += jsonTxt.length;
+							items++;
+						}else{
+							self._localStore.removeItem(id);
+						}
+					}
+				}catch(e){
+					console.info("POPULATE ERROR", e);
 				}
 			}).then(function(){
 				self._checkAndRunReady({
@@ -212,19 +268,6 @@ define([
 			return false;
 		},
 		
-		_getIdArrayFromStorage: function(){
-			try{
-				var ids = new Array();
-				for(var n = 0; n < this._localStore.length; n++){
-					ids.push(this._localStore.key(n));
-				}
-				return ids;
-			}catch(e){
-				console.info("Could not obtain an ID-array for the browser cache.");
-				return [];
-			}
-		},
-		
 		_copyLocalObjectToMemory: function(obj){
 			try{
 				if(this._getStoreIdForObject(obj) == this.id){
@@ -334,14 +377,42 @@ define([
 				}
 			}catch(e){
 				try{
-					nValue = JSON2.parse(nValue);
+					nValue = this._jsonFix1(nValue);
 				}catch(e){
-					console.info("could JSON parse the supplied value.");
-					nValue = value;
+					try{
+						nValue = this._jsonFix2(nValue);
+					}catch(e){
+						try{
+							nValue = eval('(' + nValue + ')');
+						}catch(e){
+							console.info("could JSON parse the supplied value.", nValue);
+							nValue = null;
+						}
+					}
 				}
 			}
 			
 			return nValue;
+		},
+		
+		_jsonFix1: function(txt){
+			if(typeTest.isEqual(txt.charAt(0), "[") && !typeTest.isEqual(txt.slice(-1), "]")){
+				return txt + "]";
+			}else if(typeTest.isEqual(txt.charAt(0), "{") && !typeTest.isEqual(txt.slice(-1), "}")){
+				return txt + "}";
+			}
+			
+			return txt
+		},
+		
+		_jsonFix2: function(txt){
+			if(typeTest.isEqual(txt.charAt(0), "[") && !typeTest.isEqual(txt.slice(-1), "]")){
+				return txt + "\"]";
+			}else if(typeTest.isEqual(txt.charAt(0), "{") && !typeTest.isEqual(txt.slice(-1), "}")){
+				return txt + "\"}";
+			}
+			
+			return txt
 		},
 		
 		_uncompressAndDecrypt: function(value){
