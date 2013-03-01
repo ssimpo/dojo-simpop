@@ -23,10 +23,15 @@ define([
 ){
 	"use strict";
 	
-	var idCache = new Array();
-	var idCacheCallbacks = new Array();
-	var idCacheDone = false;
-	var idCacheRunning = false;
+	var idCacheLocal = new Array();
+	var idCacheCallbacksLocal = new Array();
+	var idCacheDoneLocal = false;
+	var idCacheRunningLocal = false;
+	
+	var idCacheSession = new Array();
+	var idCacheCallbacksSession = new Array();
+	var idCacheDoneSession = false;
+	var idCacheRunningSession = false;
 	
 	function getIdArrayFromStorage(store){
 		try{
@@ -41,22 +46,61 @@ define([
 		}
 	}
 	
-	function populateIdCache(store){
-		var def = new Deferred();
-		idCacheCallbacks.push(def);
+	function populateIdCache(store, sessionOnly){
+		if(sessionOnly){
+			return populateIdCacheSession(store);
+		}else{
+			return populateIdCacheLocal(store)
+		}
 		
-		if(!idCacheDone){
-			if(!idCacheRunning){
-				idCacheRunning = true;
-				idCache = getIdArrayFromStorage(store);
-				idCacheDone = true;
+		return null;
+	}
+	
+	function populateIdCacheLocal(store){
+		try{
+		var def = new Deferred();
+		idCacheCallbacksLocal.push(def);
+		
+		if(!idCacheDoneLocal){
+			if(!idCacheRunningLocal){
+				idCacheRunningLocal = true;
+				idCacheLocal = getIdArrayFromStorage(store);
+				idCacheDoneLocal = true;
 				
-				array.forEach(idCacheCallbacks, function(def){
-					def.resolve(idCache);
+				array.forEach(idCacheCallbacksLocal, function(def){
+					def.resolve(idCacheLocal);
 				});
 			}
 		}else{
-			def.resolve(idCache);
+			def.resolve(idCacheLocal);
+		}
+		}catch(e){
+			console.info(2, e);
+		}
+		
+		return def; 
+	}
+	
+	function populateIdCacheSession(store){
+		try{
+		var def = new Deferred();
+		idCacheCallbacksSession.push(def);
+		
+		if(!idCacheDoneSession){
+			if(!idCacheRunningSession){
+				idCacheRunningSession = true;
+				idCacheSession = getIdArrayFromStorage(store);
+				idCacheDoneSession = true;
+				
+				array.forEach(idCacheCallbacksSession, function(def){
+					def.resolve(idCacheSession);
+				});
+			}
+		}else{
+			def.resolve(idCacheSession);
+		}
+		}catch(e){
+			console.info(3, e);
 		}
 		
 		return def; 
@@ -82,13 +126,12 @@ define([
 		
 		constructor: function(args){
 			this._init(args);
-			
 			if(this._localStore){
 				try{
 					this._attachAspects();
 					this._initPopulation();
 				}catch(e){
-					console.info("Could not load and interface "+((this.sessionOnly)?"SessionStorage":"LocalStorage")+".");
+					console.info("Could not load and interface "+((this.sessionOnly)?"SessionStorage":"LocalStorage")+".", e);
 				}
 			}
 			
@@ -111,7 +154,7 @@ define([
 		},
 		
 		_initPopulation: function(){
-			populateIdCache(this._localStore).then(
+			populateIdCache(this._localStore, this.sessionOnly).then(
 				lang.hitch(this, function(cache){
 					this._idCache = cache;
 					this._populate();
