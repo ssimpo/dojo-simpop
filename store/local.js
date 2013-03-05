@@ -57,7 +57,6 @@ define([
 	}
 	
 	function populateIdCacheLocal(store){
-		try{
 		var def = new Deferred();
 		idCacheCallbacksLocal.push(def);
 		
@@ -73,9 +72,6 @@ define([
 			}
 		}else{
 			def.resolve(idCacheLocal);
-		}
-		}catch(e){
-			console.info(2, e);
 		}
 		
 		return def; 

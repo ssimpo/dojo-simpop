@@ -254,6 +254,23 @@ define([
 			}
 		},
 		
+		priorityAdd: function(func){
+			try{
+				var obj = {
+					"execute": func,
+					"deferred": new Deferred()
+				};
+				
+				functionQueue.unshift(obj);
+				
+				return obj.deferred;
+			}catch(e){
+				var deferred = new Deferred();
+				failedToAdd(deferred, "Could not add interval.");
+				return deferred;
+			}
+		},
+		
 		stop: function(){
 			// summary:
 			//		Stop all intervals running (will not empty the queue or
