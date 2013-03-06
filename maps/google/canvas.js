@@ -151,8 +151,8 @@ define([
 			}, function(result){
 				if(!typeTest.isBlank(result)){
 					callback(
-						result[0].geometry.location.Ya,
-						result[0].geometry.location.Za
+						result[0].geometry.location.ib,
+						result[0].geometry.location.jb
 					);
 				}else{
 					callback(null);
