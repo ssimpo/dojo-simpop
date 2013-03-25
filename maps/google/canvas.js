@@ -133,7 +133,9 @@ define([
 			
 			if(window.google !== undefined){
 				if(window.google.maps !== undefined){
-					return this._callback(google.maps);
+					if(typeTest.isFunction(this._callback)){
+						return this._callback(google.maps);
+					}
 				}
 			}
 			
@@ -145,14 +147,16 @@ define([
 		},
 		
 		_postcodeLookup: function(postcode, callback){
+			var self = this;
+			
 			this._geoCoder.geocode({
 				"address": postcode,
 				"region": "GB"
 			}, function(result){
 				if(!typeTest.isBlank(result)){
 					callback(
-						result[0].geometry.location.ib,
-						result[0].geometry.location.jb
+						result[0].geometry.location.lat(),
+						result[0].geometry.location.lng()
 					);
 				}else{
 					callback(null);
