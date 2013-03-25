@@ -16,8 +16,8 @@ define([
 	"use strict";
 	
 	var intervalFunction = null;
-	var period = 50;
-	var _period = 50;
+	var period = 75;
+	var _period = 75;
 	var running = false;
 	var functionQueue = new Array();
 	var functionList = new Array();
@@ -204,7 +204,9 @@ define([
 			
 			try{
 				if(propName === "period"){
+					construct.stop();
 					period = value;
+					construct.start();
 				}
 			}catch(e){
 				console.info("Could not change property, "+propName+" to "+value+".");
