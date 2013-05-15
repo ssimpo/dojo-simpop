@@ -114,22 +114,20 @@ define([
 		},
 		
 		_init: function(){
-			var self = this;
-			
-			aspect.around(this, "on", function(originalOn){
-				return function(target, type, listener, dontFix){
-					var caller = function(){
-						return on(self.map, type, listener, dontFix);
-					}
+			aspect.around(this, "on", lang.hitch(this, function(originalOn){
+				return lang.hitch(this, function(target, type, listener, dontFix){
+					var caller = lang.hitch(this, function(){
+						return on(this.map, type, listener, dontFix);
+					});
 					
-					if(self._loaded){
+					if(this._loaded){
 						return caller();
 					}else{
-						self._onLoadFunctions.push(caller);
+						this._onLoadFunctions.push(caller);
 						return null;
 					}
-				};
-			});
+				});
+			}));
 			
 			if(window.google !== undefined){
 				if(window.google.maps !== undefined){
@@ -147,12 +145,10 @@ define([
 		},
 		
 		_postcodeLookup: function(postcode, callback){
-			var self = this;
-			
 			this._geoCoder.geocode({
 				"address": postcode,
 				"region": "GB"
-			}, function(result){
+			}, lang.hitch(this, function(result){
 				if(!typeTest.isBlank(result)){
 					callback(
 						result[0].geometry.location.lat(),
@@ -161,7 +157,7 @@ define([
 				}else{
 					callback(null);
 				}
-			});
+			}));
 		},
 		
 		_googleMapsLoaded: function(gmap){

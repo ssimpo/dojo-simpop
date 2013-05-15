@@ -43,6 +43,7 @@ define([
 			if(chunks.length > 0){
 				array.forEach(chunks, function(chunk, n){
 					promises.push(interval.add(function(){
+						//console.log(chunkSize, chunks.length, ary.length);
 						array.forEach(chunk, func);
 						if(callback !== undefined){
 							if(n == (chunks.length - 1)){

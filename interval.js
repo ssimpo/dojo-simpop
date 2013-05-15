@@ -100,13 +100,13 @@ define([
 		//		Run an interval.
 		
 		try{
-			var elapsed = new Date().getTime() - endIntervalTime;
-			if(endIntervalTime > period){
+			//var elapsed = new Date().getTime() - endIntervalTime;
+			//if(endIntervalTime > period){
 				incCounter();
 				runIntervalLoop();
 				runIntervalQueue();
-				endIntervalTime = new Date().getTime();
-			}
+				//endIntervalTime = new Date().getTime();
+			//}
 		}catch(e){
 			console.info("Could not run the interval functions.");
 		}
