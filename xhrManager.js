@@ -44,7 +44,7 @@ define([
 	var worker = ((isWorker) ? global.worker : null);
 	var ready = false;
 	var breakout = false;
-	var useWorker = true;
+	var useWorker = false;
 	var optionsParsers = new Array();
 
 	function decCounter(){
@@ -128,10 +128,18 @@ define([
 		
 		try{
 			if(typeTest.isObject(obj)){
+				var coeff = 1000 * 60 * 5;
+				var preventCache = new Date();
+				preventCache = new Date(Math.round(preventCache.getTime() / coeff) * coeff)
+				preventCache = preventCache.getTime();
+				
 				obj = lang.mixin({
 					"handleAs": "json",
 					"timeout": timeout,
-					"preventCache": true,
+					"preventCache": false,
+					"query": {
+						"preventCache": preventCache
+					},
 					"deferred": new Deferred()
 				}, obj);
 				

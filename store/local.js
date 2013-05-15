@@ -171,35 +171,34 @@ define([
 		_populate: function(){
 			var size = 0;
 			var items = 0;
-			var self = this;
 			var counter = 0;
 			
-			iarray.forEach(this._idCache, this.slicer, function(id){
+			iarray.forEach(this._idCache, this.slicer, lang.hitch(this, function(id){
 				try{
-					if(self._stringEndsWith(id, "_"+self.id)){
-						var jsonTxt = self._localStore.getItem(id);
-						var obj = self._parseLocalObject(id, jsonTxt);
+					if(this._stringEndsWith(id, "_"+this.id)){
+						var jsonTxt = this._localStore.getItem(id);
+						var obj = this._parseLocalObject(id, jsonTxt);
 						
 						if(!typeTest.isEmpty(obj)){
-							self._copyLocalObjectToMemory(obj);
+							this._copyLocalObjectToMemory(obj);
 							size += jsonTxt.length;
 							items++;
 						}else{
-							self._localStore.removeItem(id);
+							this._localStore.removeItem(id);
 						}
 					}
 				}catch(e){
 					console.info("POPULATE ERROR", e);
 				}
-			}).then(function(){
-				self._checkAndRunReady({
+			})).then(lang.hitch(this, function(){
+				this._checkAndRunReady({
 					"bubbles": false,
 					"cancelable": false,
-					"target": self,
+					"target": this,
 					"size": size,
 					"items": items
 				});
-			});
+			}));
 		},
 		
 		_getLocalObjectSize: function(id){
@@ -228,13 +227,12 @@ define([
 		size: function(callback){
 			var size = 0;
 			var uncompressedSize = 0;
-			var self = this;
 			this._idCache = this._getIdArrayFromStorage();
 			
-			iarray.forEach(this._idCache, this.slicer, function(id){
-				var localObjString = self._localStore.getItem(id);
+			iarray.forEach(this._idCache, this.slicer, lang,hitch(this, function(id){
+				var localObjString = this._localStore.getItem(id);
 				size += localObjString.length;
-			}, function(){
+			}), function(){
 				callback(size, uncompressedSize);
 			});
 		},
