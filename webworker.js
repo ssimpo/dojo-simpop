@@ -199,13 +199,11 @@ define([
 		var message = null;
 		
 		try{
-			if(typeTest.isObject(data)){
-				if(typeTest.isProperty(data, "data")){
-					message = data.data;
+			if(typeTest.isProperty(data, "data")){
+				message = data.data;
 				
-					if(typeTest.isArrayBuffer(message)){
-						message = convertArrayBufferToObject(message);
-					}
+				if(typeTest.isArrayBuffer(message)){
+					message = convertArrayBufferToObject(message);
 				}
 			}
 		}catch(e){
