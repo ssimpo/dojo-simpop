@@ -26,7 +26,7 @@ var worker = new Object();
     var staticObj = {
 		"relativePath": "",
 		"_includes": [
-			"./worker/console",
+			"worker/console",
 			"../dojo/dojo"
 		],
 		"transferableObjects": false,
