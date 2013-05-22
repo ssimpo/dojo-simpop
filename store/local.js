@@ -71,7 +71,6 @@ define([
 				idCacheRunningLocal = true;
 				idCacheLocal = getIdArrayFromStorage(store);
 				idCacheDoneLocal = true;
-				
 				array.forEach(idCacheCallbacksLocal, function(def){
 					def.resolve(idCacheLocal);
 				});
@@ -79,7 +78,6 @@ define([
 		}else{
 			def.resolve(idCacheLocal);
 		}
-		
 		return def; 
 	}
 	
@@ -136,7 +134,6 @@ define([
 					console.info("Could not load and interface "+((this.sessionOnly)?"SessionStorage":"LocalStorage")+".", e);
 				}
 			}
-			
 			this._initDone = true;
 		},
 		
