@@ -9,16 +9,17 @@ define([
 	"dojo/_base/declare",
 	"dojo/_base/array",
 	"dojo/Deferred",
-	"simpo/typeTest"
+	"simpo/typeTest",
+	"dojo/has",
+	"dojo/sniff"
 ], function(
-	declare, array, Deferred, typeTest
+	declare, array, Deferred, typeTest, has, sniff
 ) {
 	"use strict";
 	
 	var intervalFunction = null;
-	var period = 75;
-	var _period = 75;
-	var running = false;
+	var period = ((has("ie")) ? 150 : 75);
+	var _period = period;
 	var functionQueue = new Array();
 	var functionList = new Array();
 	var counter = 0;
@@ -32,7 +33,7 @@ define([
 		
 		try{
 			if((intervalFunction === null) && (typeTest.isBlank(locks))){
-				intervalFunction = setInterval(interval, _period);
+				intervalFunction = setTimeout(interval, _period);
 			}
 		}catch(e){
 			console.info("Failed to create interval.");
@@ -45,7 +46,7 @@ define([
 		
 		try{
 			if(intervalFunction !== null){
-				clearInterval(intervalFunction);
+				clearTimeout(intervalFunction);
 				intervalFunction = null;
 			}
 		}catch(e){
@@ -58,17 +59,15 @@ define([
 		//		Interval controller. Only run if interval not already excuting.
 		
 		try{
-			if(!running){
-				running = true;
-				if(_period !== period){
-					clearCurrentInterval();
-					_period = period;
-					running = false;
-					initInterval();
-				}else{
-					runInterval();
-					running = false;
-				}
+			
+			if(_period !== period){
+				clearCurrentInterval();
+				_period = period;
+				initInterval();
+			}else{
+				runInterval();
+				clearCurrentInterval();
+				initInterval();
 			}
 		}catch(e){
 			console.info("Could not run the interval.", point);
