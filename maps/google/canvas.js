@@ -40,8 +40,42 @@ define([
 		"_loaded": false,
 		"_onLoadFunctions": [],
 		
+		constructor: function(){
+			interval.add(lang.hitch(this, this._runOnLoadFunctions), true, 4);
+		},
+		
 		postCreate: function(){
 			this._init();
+		},
+		
+		addOnload: function(func){
+			this._onLoadFunctions.push(func);
+		},
+		
+		_runOnLoadFunctions: function(){
+			if(this._loaded){
+				while(this._onLoadFunctions.length > 0){
+					var func = this._onLoadFunctions.shift();
+					func();
+				}
+			}
+		},
+		
+		_init: function(){
+			// NOT SURE WHAT THIS WAS FOR??
+			/*if(window.google !== undefined){
+				if(window.google.maps !== undefined){
+					if(typeTest.isFunction(this._callback)){
+						return this._callback(google.maps);
+					}
+				}
+			}*/
+			
+			new googleLoader({
+				"callback": lang.hitch(this, this._googleMapsLoaded)
+			});
+			
+			return true;
 		},
 		
 		centre: function(lat, lng){
@@ -113,37 +147,6 @@ define([
 			
 		},
 		
-		_init: function(){
-			aspect.around(this, "on", lang.hitch(this, function(originalOn){
-				return lang.hitch(this, function(target, type, listener, dontFix){
-					var caller = lang.hitch(this, function(){
-						return on(this.map, type, listener, dontFix);
-					});
-					
-					if(this._loaded){
-						return caller();
-					}else{
-						this._onLoadFunctions.push(caller);
-						return null;
-					}
-				});
-			}));
-			
-			if(window.google !== undefined){
-				if(window.google.maps !== undefined){
-					if(typeTest.isFunction(this._callback)){
-						return this._callback(google.maps);
-					}
-				}
-			}
-			
-			new googleLoader({
-				"callback": lang.hitch(this, this._googleMapsLoaded)
-			});
-			
-			return true;
-		},
-		
 		_postcodeLookup: function(postcode, callback){
 			this._geoCoder.geocode({
 				"address": postcode,
@@ -162,24 +165,14 @@ define([
 		
 		_googleMapsLoaded: function(gmap){
 			this._geoCoder = new gmap.Geocoder();
-			var mapOptions = {
+			this.map = new gmap.Map(this.domNode, {
 				center: new gmap.LatLng(-34.397, 150.644),
 				zoom: 11,
 				mapTypeId: gmap.MapTypeId.ROADMAP
-			};
-			this.map = new gmap.Map(
-				this.domNode,
-				mapOptions
-			);
+			});
 			
+			//this.emit("load", {bubbles: false, cancelable: false});
 			this._loaded = true;
-			
-			if(this._onLoadFunctions.length > 0){
-				array.forEach(this._onLoadFunctions, function(func){
-					func();
-				});
-			}
-			
 			this.callback(this);
 		}
 	});
