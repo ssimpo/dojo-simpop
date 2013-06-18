@@ -38,16 +38,19 @@ define([
 			var ids = new Array();
 			var tester = new RegExp("^[A-Za-z0-9]+_[A-Za-z0-9]+$");
 			for(var n = 0; n < store.length; n++){
-				var id = store.key(n);
+				var id = store.key(n).toString();
+				
 				if(!tester.test(id)){
-					store.remove(id);
+					try{
+						store.removeItem(id);
+					}catch(e){ }
 				}else{
 					ids.push(id);
 				}
 			}
 			return ids;
 		}catch(e){
-			console.info("Could not obtain an ID-array for the browser cache.");
+			console.info("Could not obtain an ID-array for the browser cache.", e);
 			return [];
 		}
 	}
@@ -185,7 +188,7 @@ define([
 						}
 					}
 				}catch(e){
-					console.info("POPULATE ERROR", e);
+					console.info("Populate error", e);
 				}
 			})).then(lang.hitch(this, function(){
 				this._checkAndRunReady({
@@ -269,7 +272,7 @@ define([
 				iarray.forEach(
 					ids, this.slicer, function(id){
 						if(!this._removeItem(id, doFullClear)){
-							console.warn("FAILED TO REMOVE ", id);
+							console.warn("Failed to remove ", id);
 						}
 					}, function(){
 						this._clearing = false;
@@ -349,7 +352,7 @@ define([
 					return false
 				}
 			}catch(e){
-				console.info("Could not transferre dojo store object to browser cache.");
+				console.info("Could not transferre dojo store object to browser cache.", e);
 				return false;
 			}
 		},
@@ -529,11 +532,9 @@ define([
 			
 			return function(id){
 				var result = orginalRemove(id);
-				
 				if(result){
 					this._localStore.removeItem(id+"_"+this.id);
 				}
-				
 				return result;
 			};
 		},
