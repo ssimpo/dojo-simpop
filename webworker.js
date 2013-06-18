@@ -130,10 +130,13 @@ define([
 					lang.hitch(this, receiveMessage, worker)
 				);
 				
+				var config = lang.clone(dojoConfig);
+				config.baseUrl = location.protocol+"//"+location.hostname + config.baseUrl;
+				
 				worker.sendMessage("init", {
 					"src": require.toUrl(worker.src),
-					"relativePath": require.toUrl("./"),
-					"dojoConfig": dojoConfig,
+					"relativePath": location.protocol+"//"+location.hostname+require.toUrl("./"),
+					"dojoConfig": config,
 					"transferableObjects": has("transferable-objects")
 				});
 			}catch(e){
