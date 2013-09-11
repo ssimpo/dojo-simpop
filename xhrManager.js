@@ -44,7 +44,7 @@ define([
 	var worker = ((isWorker) ? global.worker : null);
 	var ready = false;
 	var breakout = false;
-	var useWorker = true;
+	var useWorker = false;
 	var optionsParsers = new Array();
 
 	function decCounter(){
