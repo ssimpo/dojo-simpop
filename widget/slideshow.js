@@ -48,7 +48,7 @@ define([
 		"_tPos": 0,
 		"_cImageNo":0,
 		"type":"blinds",
-		"squaresSize":30,
+		"squaresSize":50,
 		"_squaresCentre":null,
 		
 		_setSrcAttr: function(src){
@@ -70,9 +70,15 @@ define([
 			this._squaresCentre = new Array();
 			var centreX = parseInt((this.squaresSize/2), 10);
 			var centreY = centreX;
+			var currentCentreX = centreX;
+			var currentCentreY = centreY;
+			var col = 0;
+			var row = 0;
+			var i = 0;
 			
 			while((currentCentreY-centreY)<=this.height){
-				var currentCentreX = (col*this.squaresSize)+centreX;
+				currentCentreX = (col*this.squaresSize)+centreX;
+				
 				if(currentCentreX > this.width){
 					col = 0;
 					currentCentreX = (col*this.squaresSize)+centreX;
@@ -81,6 +87,8 @@ define([
 				var currentCentreY = (row*this.squaresSize)+centreY;
 				
 				this._squaresCentre[i] = new Array(currentCentreX, currentCentreY);
+				i++;
+				col++;
 			}
 		},
 		
@@ -148,11 +156,36 @@ define([
 				clearTimeout(this._timer);
 			}
 			
-			
-			this._squaresCentre.forEach(function(squareXY, n){
+			array.forEach(this._squaresCentre, function(squareXY, n){
+				var x = squareXY[0]-this._pos;
+				x = (x<0)?0:x;
+				x = (x>this.width)?this.width:x;
+				var y = squareXY[1]-this._pos;
+				y = (y<0)?0:y;
+				y = (y>this.height)?this.height:y;
 				
+				this._context.drawImage(
+					this._imageData[imageNo],
+					x,y,
+					this._pos,this._pos,
+					x,y,
+					this._pos,this._pos
+				);
 			},this);
 			
+			this._pos+=2;
+			
+			if((this._pos/2) <= (this.squaresSize/2)){
+				this._timer = setTimeout(
+					lang.hitch(this, this._drawSquare, imageNo),
+					this.speed
+				);
+			}else{
+				this._timer = setTimeout(
+					lang.hitch(this, this._displayImage),
+					this.interval
+				);
+			}
 		},
 		
 		_drawStripeLine: function(imageNo, ccPos){
