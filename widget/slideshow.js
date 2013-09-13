@@ -113,31 +113,43 @@ define([
 			}
 		},
 		
-		_drawStripe: function(cImageNo){
+		_drawStripeLine: function(imageNo, ccPos){
+			this._context.drawImage(
+				this._imageData[imageNo],
+				this._pos+ccPos,0,1,this.height,
+				this._pos+ccPos,0,1,this.height
+			);
+		},
+		
+		_calculateCanvasPosition: function(stripeNo){
+			var pos = 0;
+			for(var i=0; i<stripeNo; i++){
+				pos += this._stripeWidths[i];
+			}
+			
+			return pos;
+		},
+		
+		_drawStripe: function(imageNo){
 			if(this._timer !== null){
 				clearTimeout(this._timer);
 			}
 			
 			for(var i=0; i<this.stripes; i++){
 				if(this._pos < this._stripeWidths[i]){
-					var ccPos = 0;
-					for(var ii=0; ii<i; ii++){
-						ccPos += this._stripeWidths[ii];
-					}
-					
-					this._context.drawImage(
-						this._imageData[cImageNo],
-						this._pos+ccPos,0,1,this.height,
-						this._pos+ccPos,0,1,this.height
-					);
+					var ccPos = this._calculateCanvasPosition(i);
+					this._drawStripeLine(imageNo, ccPos);
 					this._tPos++;
 				}
 			}
 			this._pos++;
-				
+			this._callInterval(imageNo);
+		},
+		
+		_callInterval: function(imageNo){
 			if(this._tPos < this.width){
 				this._timer = setTimeout(
-					lang.hitch(this, this._drawStripe, cImageNo),
+					lang.hitch(this, this._drawStripe, imageNo),
 					this.speed
 				);
 			}else{
