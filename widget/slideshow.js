@@ -38,11 +38,13 @@ define([
 		"height": 350,
 		"width": 350,
 		"stripes": 10,
-		"interval": 300,
+		"interval": 900,
+		"speed": 100,
 		"_stripeWidths":null,
 		"_timer": null,
 		"_pos": 0,
 		"_tPos": 0,
+		"_cImageNo":0,
 		
 		_setSrcAttr: function(src){
 			this.src = src;
@@ -90,10 +92,22 @@ define([
 		},
 		
 		_imagesLoaded: function(response){
-			this._drawStripe();
+			this._displayImage();
 		},
 		
-		_drawStripe: function(){
+		_displayImage: function(){
+			this._pos = 0;
+			this._tPos = 0;
+			
+			this._drawStripe(this._cImageNo);
+			
+			this._cImageNo++;
+			if(this._cImageNo >= this._stripeWidths.length){
+				this._cImageNo = 0;
+			}
+		},
+		
+		_drawStripe: function(cImageNo){
 			if(this._timer !== null){
 				clearTimeout(this._timer);
 			}
@@ -106,7 +120,7 @@ define([
 					}
 					
 					this._context.drawImage(
-						this._imageData[0],
+						this._imageData[cImageNo],
 						this._pos+ccPos,0,1,this.height,
 						50+this._pos+ccPos,50,1,this.height
 					);
@@ -116,7 +130,15 @@ define([
 			this._pos++;
 				
 			if(this._tPos < this.width){
-				this._timer = setTimeout(lang.hitch(this, this._drawStripe), 300);
+				this._timer = setTimeout(
+					lang.hitch(this, this._drawStripe, cImageNo),
+					this.speed
+				);
+			}else{
+				this._timer = setTimeout(
+					lang.hitch(this, this._displayImage),
+					this.interval
+				);
 			}
 		}
 	});
