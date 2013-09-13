@@ -47,6 +47,9 @@ define([
 		"_pos": 0,
 		"_tPos": 0,
 		"_cImageNo":0,
+		"type":"blinds",
+		"squaresSize":30,
+		"_squaresCentre":null,
 		
 		_setSrcAttr: function(src){
 			this.src = src;
@@ -56,6 +59,29 @@ define([
 		_setWidthAttr: function(width){
 			this.width = width;
 			this._setStripeWidths();
+		},
+		
+		_setSquaresSizeAttr: function(value){
+			this.squaresSize = value;
+			this._setSquarePoints();
+		},
+		
+		_setSquarePoints: function(){
+			this._squaresCentre = new Array();
+			var centreX = parseInt((this.squaresSize/2), 10);
+			var centreY = centreX;
+			
+			while((currentCentreY-centreY)<=this.height){
+				var currentCentreX = (col*this.squaresSize)+centreX;
+				if(currentCentreX > this.width){
+					col = 0;
+					currentCentreX = (col*this.squaresSize)+centreX;
+					row ++;
+				}
+				var currentCentreY = (row*this.squaresSize)+centreY;
+				
+				this._squaresCentre[i] = new Array(currentCentreX, currentCentreY);
+			}
 		},
 		
 		_setStripeWidths: function(){
@@ -105,12 +131,28 @@ define([
 			this._pos = 0;
 			this._tPos = 0;
 			
-			this._drawStripe(this._cImageNo);
+			if(this.type == "blinds"){
+				this._drawStripe(this._cImageNo);
+			}else if(this.type == "squares"){
+				this._drawSquare(this._cImageNo);
+			}
 			
 			this._cImageNo++;
 			if(this._cImageNo >= this._stripeWidths.length){
 				this._cImageNo = 0;
 			}
+		},
+		
+		_drawSquare: function(imageNo){
+			if(this._timer !== null){
+				clearTimeout(this._timer);
+			}
+			
+			
+			this._squaresCentre.forEach(function(squareXY, n){
+				
+			},this);
+			
 		},
 		
 		_drawStripeLine: function(imageNo, ccPos){
