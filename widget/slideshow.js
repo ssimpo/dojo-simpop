@@ -16,10 +16,12 @@ define([
 	"dojo/_base/array",
 	"dojo/Deferred",
 	"dojo/promise/all",
-	"dojo/_base/lang"
+	"dojo/_base/lang",
+	"dojo/dom-construct",
+	"dojo/dom-style"
 ], function(
 	declare, _widget, _templated, _wTemplate, i18n, strings, template, on,
-	array, Deferred, defAll, lang
+	array, Deferred, defAll, lang, domConstr, domStyle
 ){
 	"use strict";
 	
@@ -69,11 +71,6 @@ define([
 			}
 		},
 		
-		_setCanvasAttr: function(canvas){
-			this._context = canvas.getContext("2d");
-			this.canvas = canvas;
-		},
-		
 		_loadImages: function(src){
 			var defs = new Array();
 			
@@ -92,7 +89,16 @@ define([
 		},
 		
 		_imagesLoaded: function(response){
+			this._createCanvas();
 			this._displayImage();
+		},
+		
+		_createCanvas: function(){
+			var canvas = domConstr.create("canvas", {
+				"width":this.width,
+				"height":this.height
+			}, this.container);
+			this._context = canvas.getContext("2d");
 		},
 		
 		_displayImage: function(){
@@ -122,7 +128,7 @@ define([
 					this._context.drawImage(
 						this._imageData[cImageNo],
 						this._pos+ccPos,0,1,this.height,
-						50+this._pos+ccPos,50,1,this.height
+						this._pos+ccPos,0,1,this.height
 					);
 					this._tPos++;
 				}
