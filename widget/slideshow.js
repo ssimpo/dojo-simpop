@@ -79,7 +79,7 @@ define([
 			while((currentCentreY-centreY)<=this.height){
 				currentCentreX = (col*this.squaresSize)+centreX;
 				
-				if(currentCentreX > this.width){
+				if((currentCentreX-centreX) > this.width){
 					col = 0;
 					currentCentreX = (col*this.squaresSize)+centreX;
 					row ++;
