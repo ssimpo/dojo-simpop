@@ -59,7 +59,15 @@ define([
 		
 		_setWidthAttr: function(width){
 			this.width = width;
+			domStyle.set(this.domNode, "width", width+"px");
+			domStyle.set(this.container, "width", width+"px");
 			this._setStripeWidths();
+		},
+		
+		_setHeightAttr: function(height){
+			this.height = height;
+			domStyle.set(this.domNode, "height", height+"px");
+			domStyle.set(this.container, "height", height+"px");
 		},
 		
 		_setSquaresSizeAttr: function(value){
@@ -218,6 +226,7 @@ define([
 				
 				if(imageNo == 0){
 					//console.log(n, squareXY.x, squareXY.y, width, height);
+					//console.log(squareXY, n);
 				}
 				
 				this._context.drawImage(
