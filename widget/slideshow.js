@@ -50,6 +50,7 @@ define([
 		"type":"blinds",
 		"squaresSize":50,
 		"_squaresCentre":null,
+		"_squaresCentre2":null,
 		
 		_setSrcAttr: function(src){
 			this.src = src;
@@ -64,6 +65,7 @@ define([
 		_setSquaresSizeAttr: function(value){
 			this.squaresSize = value;
 			this._setSquarePoints();
+			this._setSquarePoints2();
 		},
 		
 		_setSquarePoints: function(){
@@ -89,6 +91,56 @@ define([
 				this._squaresCentre[i] = new Array(currentCentreX, currentCentreY);
 				i++;
 				col++;
+			}
+		},
+		
+		_calculateRowAndColCount: function(dimension){
+			var rowOrCol = Math.floor(dimension/this.squaresSize);
+			rowOrCol = (
+				((dimension%this.squaresSize) == 0)?
+					rowOrCol:
+					rowOrCol+1
+			);
+			
+			return rowOrCol;
+		},
+		
+		_calculateCurrentBoxDimension: function(dimension, count, cCount){
+			if(cCount == (count-1)){
+				var cDimension = this.squaresSize;
+				return (
+					((dimension%this.squaresSize) == 0)?
+						cDimension:
+						(dimension%this.squaresSize)
+				);
+			}else{
+				return this.squaresSize;
+			}
+		},
+		
+		_setSquarePoints2: function(){
+			this._squaresCentre2 = new Array();
+			
+			var cols = this._calculateRowAndColCount(this.width);
+			var rows = this._calculateRowAndColCount(this.height);
+			
+			for(var cCol = 0, i = 0; cCol < cols; cCol++){
+				for(var cRow = 0; cRow < rows; cRow++, i++){
+					
+					var width = this._calculateCurrentBoxDimension(
+						this.width, cols, cCol
+					);
+					var height = this._calculateCurrentBoxDimension(
+						this.height, rows, cRow
+					);
+					
+					this._squaresCentre2[i] = {
+						"x":(cCol*this.squaresSize), "y":(cRow*this.squaresSize),
+						"height":height, "width":width
+					};
+					
+					//console.log(i, this._squaresCentre2[i]);
+				}
 			}
 		},
 		
@@ -142,12 +194,51 @@ define([
 			if(this.type == "blinds"){
 				this._drawStripe(this._cImageNo);
 			}else if(this.type == "squares"){
-				this._drawSquare(this._cImageNo);
+				this._drawSquare2(this._cImageNo);
 			}
 			
 			this._cImageNo++;
 			if(this._cImageNo >= this._stripeWidths.length){
 				this._cImageNo = 0;
+			}
+		},
+		
+		_drawSquare2: function(imageNo){
+			if(this._timer !== null){
+				clearTimeout(this._timer);
+			}
+			
+			array.forEach(this._squaresCentre2, function(squareXY, n){
+				//console.log(squareXY, n);
+				
+				var width = this._pos;
+				width = ((width > squareXY.width)?squareXY.width:width);
+				var height = this._pos;
+				height = ((height > squareXY.height)?squareXY.height:height);
+				
+				if(imageNo == 0){
+					//console.log(n, squareXY.x, squareXY.y, width, height);
+				}
+				
+				this._context.drawImage(
+					this._imageData[imageNo],
+					squareXY.x, squareXY.y, width, height,
+					squareXY.x, squareXY.y, width, height
+				);
+			}, this);
+			
+			this._pos+=2;
+			
+			if(this._pos <= this.squaresSize){
+				this._timer = setTimeout(
+					lang.hitch(this, this._drawSquare2, imageNo),
+					this.speed
+				);
+			}else{
+				this._timer = setTimeout(
+					lang.hitch(this, this._displayImage),
+					this.interval
+				);
 			}
 		},
 		
