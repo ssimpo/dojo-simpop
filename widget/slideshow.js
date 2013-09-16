@@ -18,10 +18,11 @@ define([
 	"dojo/promise/all",
 	"dojo/_base/lang",
 	"dojo/dom-construct",
-	"dojo/dom-style"
+	"dojo/dom-style",
+	"simpo/typeTest"
 ], function(
 	declare, _widget, _templated, _wTemplate, i18n, strings, template, on,
-	array, Deferred, defAll, lang, domConstr, domStyle
+	array, Deferred, defAll, lang, domConstr, domStyle, typeTest
 ){
 	"use strict";
 	
@@ -180,16 +181,32 @@ define([
 			}
 		},
 		
-		_drawSquare: function(imageNo){
-			if(this._timer !== null){
-				clearTimeout(this._timer);
+		_clearTimeout: function(reference){
+			if(reference !== null){
+				clearTimeout(reference);
 			}
+		},
+		
+		_setTimeout: function(func, interval, args){
+			args = (
+				(typeTest.isArray(args))?
+					args:((args === null)||(args === undefined))?[]:[args]
+			);
+			
+			return setTimeout(
+				lang.hitch(this, function(){
+					func.apply(this, args)
+				}),
+				interval
+			);
+		},
+		
+		_drawSquare: function(imageNo){
+			this._clearTimeout(this._timer);
 			
 			array.forEach(this._squares, function(square, n){
-				var width = this._pos;
-				width = ((width > square.width)?square.width:width);
-				var height = this._pos;
-				height = ((height > square.height)?square.height:height);
+				var width = this._getCurrentSquareDimension("width", square);
+				var height = this._getCurrentSquareDimension("height", square);
 				
 				this._context.drawImage(
 					this._imageData[imageNo],
@@ -199,16 +216,22 @@ define([
 			}, this);
 			
 			this._pos+=2;
-			
+			this._drawSquareNext(imageNo);
+		},
+		
+		_getCurrentSquareDimension: function(dimension, square){
+			var value = this._pos;
+			return ((value > square[dimension])?square[dimension]:value);
+		},
+		
+		_drawSquareNext: function(imageNo){
 			if(this._pos <= this.squaresSize){
-				this._timer = setTimeout(
-					lang.hitch(this, this._drawSquare, imageNo),
-					this.speed
+				this._timer = this._setTimeout(
+					this._drawSquare, this.speed, imageNo
 				);
 			}else{
-				this._timer = setTimeout(
-					lang.hitch(this, this._displayImage),
-					this.interval
+				this._timer = this._setTimeout(
+					this._displayImage, this.interval
 				);
 			}
 		},
