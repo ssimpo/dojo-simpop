@@ -176,7 +176,7 @@ define([
 			}
 			
 			this._cImageNo++;
-			if(this._cImageNo >= this._stripeWidths.length){
+			if(this._cImageNo >= this._imageData.length){
 				this._cImageNo = 0;
 			}
 		},
