@@ -171,6 +171,18 @@ define([
             }else{
                 this.set("maxHeight", this.maxHeight);
             }
+            
+            this._setExpandedHeight();
+        },
+        
+        _setExpandedHeight: function(){
+            var nodes = this._getChildNodes();
+            var lastNode = nodes.pop();
+            var nodeBox = domGeom.getMarginBox(lastNode);
+            var nodeBottom = nodeBox.t + nodeBox.h;
+            if(nodeBottom > this.minHeight){
+               this.set("maxHeight", nodeBottom);
+            }
         },
         
         _setMaxHeightAttr: function(value){
