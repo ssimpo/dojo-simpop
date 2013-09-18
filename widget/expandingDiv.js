@@ -172,7 +172,9 @@ define([
                 this.set("maxHeight", this.maxHeight);
             }
             
-            this._setExpandedHeight();
+            if(this.expandToContent){
+                this._setExpandedHeight();
+            }
         },
         
         _setExpandedHeight: function(){
