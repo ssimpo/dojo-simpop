@@ -16,6 +16,7 @@ define([
 	var construct = declare(null, {
 		"_mapsApiUrl": "https://maps.googleapis.com/maps/api/js",
 		"callback": function(){},
+		"region": "UK",
 		
 		constructor: function(){
 			lang.mixin(this, arguments[0]);
@@ -28,7 +29,8 @@ define([
 			var query = {
 				"key": "AIzaSyB_YjCrNUFliiwZgm2JcHa9lJEY0NGD7Ck",
 				"callback": callbackName,
-				"sensor": true
+				"sensor": true,
+				"region": this.region
 			}
 			
 			require([
