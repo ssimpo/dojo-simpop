@@ -124,7 +124,10 @@ define([
 		
 		_plot: function(lat, lng, callback){
 			var marker = new google.maps.Marker({
-				"map": this.map
+				"map": this.map,
+				"flat": false,
+				"icon": "http://maps.google.com/intl/en_us/mapfiles/ms/micons/green-dot.png",
+				"shadow": "http://maps.google.com/intl/en_us/mapfiles/ms/micons/msmarker.shadow.png"
 			});
 			if(typeTest.isString(lat)){
 				callback = lng;
